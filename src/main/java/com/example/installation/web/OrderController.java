@@ -16,13 +16,6 @@ public class OrderController {
     private final DbOrderService dbOrderService;
     private final JdbcTemplate jdbc;
     
-    // 材料名稱轉換對應表
-    private static final Map<String, String> MATERIAL_NAME_TO_CODE = Map.of(
-        "nitrogenPipe", "A",  // 氮氣管 -> A
-        "waterPipe", "B",     // 水管 -> B
-        "vacuumPipe", "C"     // 真空管 -> C
-    );
-    
     public OrderController(DbOrderService dbOrderService, JdbcTemplate jdbc) {
         this.dbOrderService = dbOrderService;
         this.jdbc = jdbc;
@@ -70,6 +63,8 @@ public class OrderController {
             LocalDate etaDate = calculateEtaDate(dueDate, nitrogenPipe + waterPipe + vacuumPipe);
             String status = etaDate.isAfter(dueDate) ? "LATE" : "ON_TIME";
             
+            System.out.println("🔧 建立訂單: " + machineName + ", 截止日期: " + dueDate + ", 預估完成: " + etaDate);
+            
             // 插入訂單 (包含eta_date和status)
             String insertOrderSql = "INSERT INTO orders (machine_name, due_date, eta_date, status) VALUES (?, ?, ?, ?)";
             jdbc.update(insertOrderSql, machineName, dueDate, etaDate, status);
@@ -83,11 +78,13 @@ public class OrderController {
                 throw new RuntimeException("無法獲取新建訂單的ID");
             }
             
-            // 插入材料需求 (轉換為A/B/C代碼)
+            System.out.println("✅ 訂單已建立，ID: " + orderId);
+            
+            // ✅ 修正：插入材料需求，使用 A/B/C 代碼存入資料庫
             int materialCount = 0;
-            materialCount += insertMaterialIfNotZero(orderId, "A", nitrogenPipe); // 氮氣管
-            materialCount += insertMaterialIfNotZero(orderId, "B", waterPipe);    // 水管
-            materialCount += insertMaterialIfNotZero(orderId, "C", vacuumPipe);   // 真空管
+            materialCount += insertMaterialIfNotZero(orderId, "A", nitrogenPipe); // 氮氣管 -> A
+            materialCount += insertMaterialIfNotZero(orderId, "B", waterPipe);    // 水管 -> B
+            materialCount += insertMaterialIfNotZero(orderId, "C", vacuumPipe);   // 真空管 -> C
             
             String successMsg = String.format("✅ 訂單 %s 已成功建立！\n" + 
                 "預計完成日期：%s\n" +
@@ -101,6 +98,8 @@ public class OrderController {
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
         } catch (Exception e) {
+            System.err.println("❌ 建立訂單失敗: " + e.getMessage());
+            e.printStackTrace();
             redirectAttributes.addFlashAttribute("error", 
                 "訂單建立失敗：" + e.getMessage());
         }
@@ -136,6 +135,7 @@ public class OrderController {
     
     private int insertMaterialIfNotZero(Long orderId, String materialCode, int qty) {
         if (qty > 0) {
+            System.out.println("  📦 新增材料需求: 訂單 " + orderId + ", 材料 " + materialCode + ", 數量 " + qty);
             jdbc.update("INSERT INTO order_materials (order_id, material, qty_needed) VALUES (?, ?, ?)",
                        orderId, materialCode, qty);
             return 1;
@@ -184,11 +184,11 @@ public class OrderController {
             int waterPipe = ((Number) orderData.getOrDefault("waterPipe", 0)).intValue();
             int vacuumPipe = ((Number) orderData.getOrDefault("vacuumPipe", 0)).intValue();
             
-            // 從資料庫獲取實際庫存
+            // ✅ 修正：從資料庫獲取實際庫存 (A/B/C代碼)
             Map<String, Integer> inventory = Map.of(
-                "氮氣管", 30,  // A
-                "水管", 20,   // B
-                "真空管", 10  // C
+                "氮氣管", getInventoryByCode("A"),  
+                "水管", getInventoryByCode("B"),   
+                "真空管", getInventoryByCode("C")  
             );
             
             StringBuilder materialAnalysis = new StringBuilder();
@@ -223,6 +223,21 @@ public class OrderController {
             
         } catch (Exception e) {
             return Map.of("error", "預覽計算失敗: " + e.getMessage());
+        }
+    }
+    
+    // ✅ 新增：根據材料代碼獲取庫存數量的輔助方法
+    private int getInventoryByCode(String materialCode) {
+        try {
+            Integer qty = jdbc.queryForObject(
+                "SELECT qty_on_hand FROM inventory WHERE material = ?",
+                Integer.class,
+                materialCode
+            );
+            return qty != null ? qty : 0;
+        } catch (Exception e) {
+            System.err.println("❌ 獲取材料庫存失敗 (" + materialCode + "): " + e.getMessage());
+            return 0;
         }
     }
 }

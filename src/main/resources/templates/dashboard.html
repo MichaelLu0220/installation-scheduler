@@ -28,25 +28,26 @@
         <div class="px-5 pb-5 grid grid-cols-12 gap-4">
           <div class="col-span-12 md:col-span-3 rounded-2xl border p-4">
             <div class="text-sm text-gray-500">待處理工單</div>
-            <div class="text-3xl font-semibold mt-1" th:text="${totalOrders ?: 0}">0</div>
+            <div class="text-3xl font-semibold mt-1" th:text="${totalOrders != null ? totalOrders : 0}">0</div>
             <div class="text-xs text-gray-400 mt-1">從資料庫即時載入</div>
           </div>
           <div class="col-span-12 md:col-span-3 rounded-2xl border p-4">
             <div class="text-sm text-gray-500">缺料風險工單</div>
-            <div class="text-3xl font-semibold mt-1 text-amber-600" th:text="${atRiskOrders ?: 0}">0</div>
+            <div class="text-3xl font-semibold mt-1 text-amber-600" th:text="${atRiskOrders != null ? atRiskOrders : 0}">0</div>
             <div class="text-xs text-gray-400 mt-1">材料不足訂單數</div>
           </div>
           <div class="col-span-12 md:col-span-3 rounded-2xl border p-4">
             <div class="text-sm text-gray-500">準時完成率</div>
             <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden mt-1">
+              <!-- ✅ 修正：直接計算百分比，避免使用Math.max -->
               <div class="h-full bg-green-600 transition-all duration-500" 
-                   th:style="'width:' + ${onTimeRate ?: 0} + '%'"></div>
+                   th:style="'width:' + (${onTimeRate != null ? onTimeRate : 0}) + '%'"></div>
             </div>
-            <div class="text-xs mt-1" th:text="${onTimeRate ?: 0} + '%'">0%</div>
+            <div class="text-xs mt-1" th:text="(${onTimeRate != null ? onTimeRate : 0}) + '%'">0%</div>
           </div>
           <div class="col-span-12 md:col-span-3 rounded-2xl border p-4">
             <div class="text-sm text-gray-500">庫存警示材料</div>
-            <div class="text-3xl font-semibold mt-1 text-red-600" th:text="${lowStockMaterials ?: 0}">0</div>
+            <div class="text-3xl font-semibold mt-1 text-red-600" th:text="${lowStockMaterials != null ? lowStockMaterials : 0}">0</div>
             <div class="text-xs text-gray-400 mt-1">需要補貨的材料數</div>
           </div>
         </div>
@@ -59,11 +60,13 @@
           <div class="text-sm text-gray-500">當前可用庫存與總需求對比</div>
         </div>
         <div class="px-5 pb-5">
-          <div class="space-y-3" th:each="inv : ${inventoryStatus}">
+          <!-- ✅ 修正：加入空值檢查 -->
+          <div th:if="${inventoryStatus != null and !#lists.isEmpty(inventoryStatus)}" 
+               class="space-y-3" th:each="inv : ${inventoryStatus}">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
                 <div class="w-3 h-3 rounded-full" 
-                     th:classappend="${inv.hasShortage()} ? 'bg-red-500' : 'bg-green-500'"></div>
+                     th:class="${inv.hasShortage()} ? 'bg-red-500' : 'bg-green-500'"></div>
                 <span class="font-medium" th:text="${inv.material}">材料</span>
               </div>
               <div class="text-sm">
@@ -74,11 +77,19 @@
                 </span>
               </div>
             </div>
+            <!-- ✅ 修正：安全的百分比計算 -->
             <div class="w-full bg-gray-200 rounded-full h-2">
               <div class="h-2 rounded-full transition-all"
-                   th:classappend="${inv.hasShortage()} ? 'bg-red-500' : 'bg-green-500'"
-                   th:style="'width: ' + ${inv.qtyOnHand * 100 / Math.max(inv.totalDemand, 1)} + '%'"></div>
+                   th:class="${inv.hasShortage()} ? 'bg-red-500' : 'bg-green-500'"
+                   th:style="'width: ' + ${inv.totalDemand > 0 ? (inv.qtyOnHand * 100 / inv.totalDemand) : 0} + '%'"></div>
             </div>
+          </div>
+          
+          <!-- 空資料提示 -->
+          <div th:if="${inventoryStatus == null or #lists.isEmpty(inventoryStatus)}" 
+               class="text-center text-gray-500 py-4">
+            <div class="text-sm">📦 暫無庫存資料</div>
+            <div class="text-xs text-gray-400 mt-1">請檢查資料庫連線</div>
           </div>
         </div>
       </div>
@@ -90,7 +101,9 @@
           <div class="text-sm text-gray-500">材料預計到貨時間表</div>
         </div>
         <div class="px-5 pb-5">
-          <div class="space-y-2" th:each="plan : ${inboundPlans}">
+          <!-- ✅ 修正：加入空值檢查 -->
+          <div th:if="${inboundPlans != null and !#lists.isEmpty(inboundPlans)}"
+               class="space-y-2" th:each="plan : ${inboundPlans}">
             <div class="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
               <div class="flex items-center gap-3">
                 <span class="text-sm font-medium" th:text="${plan.material}">材料</span>
@@ -99,19 +112,23 @@
               <div class="text-sm font-mono text-green-600" th:text="'+' + ${plan.qty}">+0</div>
             </div>
           </div>
-          <div th:if="${#lists.isEmpty(inboundPlans)}" class="text-center text-gray-500 py-4">
-            <div class="text-sm">暫無到貨計劃</div>
+          <div th:if="${inboundPlans == null or #lists.isEmpty(inboundPlans)}" 
+               class="text-center text-gray-500 py-4">
+            <div class="text-sm">📦 暫無到貨計劃</div>
+            <div class="text-xs text-gray-400 mt-1">請檢查資料庫資料</div>
           </div>
         </div>
       </div>
 
       <!-- 工單列表 - 從DB動態載入 -->
       <div class="col-span-12 grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="bg-white rounded-2xl border shadow-sm p-4" th:each="order : ${orders}">
+        <!-- ✅ 修正：加入空值檢查 -->
+        <div th:if="${orders != null and !#lists.isEmpty(orders)}"
+             class="bg-white rounded-2xl border shadow-sm p-4" th:each="order : ${orders}">
           <div class="flex items-center gap-2 text-sm mb-1">
             <span class="font-semibold" th:text="${order.machineName}">機台名稱</span>
             <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs"
-                  th:classappend="${order.status == 'ON_TIME'} ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                  th:class="${order.status == 'ON_TIME'} ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
                   th:text="${order.status == 'ON_TIME'} ? '✅ 準時' : '⚠️ 風險'">狀態</span>
           </div>
           <div class="text-sm text-gray-700 mb-2">
@@ -124,14 +141,17 @@
           <!-- 材料需求摘要 -->
           <div class="mt-2 mb-3">
             <div class="text-xs text-gray-500 mb-1">材料需求：</div>
-            <div class="flex gap-1 flex-wrap">
+            <div th:if="${order.materials != null and !#lists.isEmpty(order.materials)}"
+                 class="flex gap-1 flex-wrap">
               <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs border"
                     th:each="material : ${order.materials}"
-                    th:classappend="${material.shortage > 0} ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'">
+                    th:class="${material.shortage > 0} ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'">
                 <span th:text="${material.material}">材料</span>: 
                 <span th:text="${material.qtyNeeded}">數量</span>
               </span>
             </div>
+            <div th:if="${order.materials == null or #lists.isEmpty(order.materials)}"
+                 class="text-xs text-gray-400">暫無材料需求資料</div>
           </div>
           
           <div class="flex gap-2">
@@ -141,13 +161,23 @@
         </div>
         
         <!-- 如果沒有工單 -->
-        <div th:if="${#lists.isEmpty(orders)}" class="col-span-2 bg-white rounded-2xl border shadow-sm p-8 text-center">
+        <div th:if="${orders == null or #lists.isEmpty(orders)}" 
+             class="col-span-2 bg-white rounded-2xl border shadow-sm p-8 text-center">
           <div class="text-gray-500">
             <div class="text-lg mb-2">📋 暫無工單</div>
             <div class="text-sm">點擊上方「新增訂單」開始建立第一個工單</div>
           </div>
         </div>
       </div>
+    </div>
+    
+    <!-- ✅ 新增：調試資訊區域 (可選，上線前移除) -->
+    <div class="mt-6 p-4 bg-gray-100 rounded-lg text-xs text-gray-600" style="display: none;">
+      <div class="font-semibold mb-2">🔍 調試資訊：</div>
+      <div>總訂單數: <span th:text="${totalOrders}">N/A</span></div>
+      <div>庫存項目數: <span th:text="${inventoryStatus != null ? #lists.size(inventoryStatus) : 0}">N/A</span></div>
+      <div>到貨計劃數: <span th:text="${inboundPlans != null ? #lists.size(inboundPlans) : 0}">N/A</span></div>
+      <div>訂單數: <span th:text="${orders != null ? #lists.size(orders) : 0}">N/A</span></div>
     </div>
   </div>
 </body>
