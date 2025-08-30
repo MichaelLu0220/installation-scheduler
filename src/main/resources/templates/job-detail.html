@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智慧安裝排程平台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+  <div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="text-xl font-semibold">智慧安裝排程平台</div>
+      <span class="ml-2 inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-2 py-0.5 text-xs">Tomcat WAR + H2</span>
+      <div class="ml-auto flex items-center gap-2">
+        <a href="/dashboard" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">Dashboard</a>
+        <a href="/jobs" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">工單</a>
+        <a href="/scheduler" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">排程</a>
+        <a href="/workers" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">技師</a>
+        <a href="/db/orders" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">H2 Orders</a>
+      </div>
+    </div>
+
+<div class="grid grid-cols-12 gap-4" th:if="${job != null}">
+  <div class="col-span-12 lg:col-span-8 space-y-4">
+    <div class="bg-white rounded-2xl border shadow-sm">
+      <div class="px-5 pt-4 pb-2">
+        <div class="text-base font-semibold flex items-center gap-3">
+          <a href="/jobs" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50 text-sm">返回</a>
+          <span th:text="${job.jobId}">JOB-XXXX</span>
+          <span class="inline-flex items-center rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-xs" th:if="${job.status=='Planned'}">已排程</span>
+          <span class="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs" th:if="${job.status=='Assigned'}">已指派</span>
+          <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-2 py-0.5 text-xs" th:if="${job.status=='Draft'}">草稿</span>
+        </div>
+      </div>
+      <div class="px-5 pb-5 grid grid-cols-12 gap-3 text-sm">
+        <div class="col-span-12">地址：<span th:text="${job.address}"></span></div>
+        <div class="col-span-6">電話：<span th:text="${job.customerPhone}"></span></div>
+        <div class="col-span-6">時段：<span th:text="${job.start}"></span> — <span th:text="${job.end}">待定</span></div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border shadow-sm">
+      <div class="px-5 pt-4 pb-2"><div class="text-base font-semibold">材料（BOM）與預留</div></div>
+      <div class="px-5 pb-5">
+        <div class="grid grid-cols-12 bg-gray-50 text-xs text-gray-500 px-3 py-2 rounded-t-xl">
+          <div class="col-span-4">品名/料號</div>
+          <div class="col-span-2 text-center">需求</div>
+          <div class="col-span-2 text-center">已預留</div>
+          <div class="col-span-2 text-center">庫位/ETA</div>
+          <div class="col-span-2 text-center">狀態</div>
+        </div>
+        <div class="grid grid-cols-12 px-3 py-2 border-t text-sm items-center" th:each="b : ${job.bom}">
+          <div class="col-span-4"><span th:text="${b.name}"></span> (<span th:text="${b.itemCode}"></span>)</div>
+          <div class="col-span-2 text-center" th:text="${b.qty}">1</div>
+          <div class="col-span-2 text-center" th:text="${b.reservedQty}">0</div>
+          <div class="col-span-2 text-center"><span th:text="${b.location != null ? b.location : (b.eta != null ? b.eta : '-')}"></span></div>
+          <div class="col-span-2 text-center">
+            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs"
+                  th:classappend="${(b.reservedQty != null ? b.reservedQty : 0) >= b.qty} ? ' bg-emerald-100 text-emerald-700' : ' bg-amber-100 text-amber-800'"
+                  th:text="${(b.reservedQty != null ? b.reservedQty : 0) >= b.qty} ? 'OK' : '待到貨'">OK</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-span-12 lg:col-span-4 space-y-4">
+    <div class="bg-white rounded-2xl border shadow-sm">
+      <div class="px-5 pt-4 pb-2"><div class="text-base font-semibold">候選時段</div></div>
+      <div class="px-5 pb-5 grid grid-cols-3 gap-2 text-sm">
+        <a class="px-3 py-1.5 rounded-xl border text-center hover:bg-gray-50">09:00</a>
+        <a class="px-3 py-1.5 rounded-xl border text-center hover:bg-gray-50">10:00</a>
+        <a class="px-3 py-1.5 rounded-xl border text-center hover:bg-gray-50">13:30</a>
+        <a class="px-3 py-1.5 rounded-xl border text-center hover:bg-gray-50">15:00</a>
+        <a class="px-3 py-1.5 rounded-xl border text-center hover:bg-gray-50">16:00</a>
+        <a class="px-3 py-1.5 rounded-xl border text-center bg-blue-600 text-white">自動提議時段</a>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl border shadow-sm">
+      <div class="px-5 pt-4 pb-2"><div class="text-base font-semibold">建議技師</div></div>
+      <div class="px-5 pb-5 space-y-2 text-sm">
+        <div class="rounded-lg border p-2 flex items-center justify-between">
+          <div><div class="font-medium">林技師</div><div class="text-xs text-gray-500">220v, 吊掛 · 台北</div></div>
+          <a class="px-3 py-1.5 rounded-xl border bg-gray-100">指派</a>
+        </div>
+        <div class="rounded-lg border p-2 flex items-center justify-between">
+          <div><div class="font-medium">黃技師</div><div class="text-xs text-gray-500">瓦斯, 220v · 新北</div></div>
+          <a class="px-3 py-1.5 rounded-xl border bg-gray-100">指派</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  </div>
+</body>
+</html>

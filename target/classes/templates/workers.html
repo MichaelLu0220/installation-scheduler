@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智慧安裝排程平台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+  <div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="text-xl font-semibold">智慧安裝排程平台</div>
+      <span class="ml-2 inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-2 py-0.5 text-xs">Tomcat WAR + H2</span>
+      <div class="ml-auto flex items-center gap-2">
+        <a href="/dashboard" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">Dashboard</a>
+        <a href="/jobs" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">工單</a>
+        <a href="/scheduler" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">排程</a>
+        <a href="/workers" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">技師</a>
+        <a href="/db/orders" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">H2 Orders</a>
+      </div>
+    </div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+  <div class="bg-white rounded-2xl border shadow-sm p-4">
+    <div class="font-semibold mb-2">林技師</div>
+    <div class="text-sm">技能：<span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-2 py-0.5 text-xs mr-1">220v</span>
+      <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-2 py-0.5 text-xs mr-1">吊掛</span></div>
+    <div class="text-sm mt-1">服務區：台北</div>
+    <div class="text-sm mt-1">狀態：<span class="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs">可用</span></div>
+  </div>
+  <div class="bg-white rounded-2xl border shadow-sm p-4">
+    <div class="font-semibold mb-2">黃技師</div>
+    <div class="text-sm">技能：<span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-2 py-0.5 text-xs mr-1">瓦斯</span>
+      <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-2 py-0.5 text-xs mr-1">220v</span></div>
+    <div class="text-sm mt-1">服務區：新北</div>
+    <div class="text-sm mt-1">狀態：<span class="inline-flex items-center rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs">忙碌</span></div>
+  </div>
+</div>
+
+  </div>
+</body>
+</html>

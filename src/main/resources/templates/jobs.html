@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智慧安裝排程平台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+  <div class="max-w-7xl mx-auto px-6 py-6">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="text-xl font-semibold">智慧安裝排程平台</div>
+      <span class="ml-2 inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-2 py-0.5 text-xs">Tomcat WAR + H2</span>
+      <div class="ml-auto flex items-center gap-2">
+        <a href="/dashboard" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">Dashboard</a>
+        <a href="/jobs" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">工單</a>
+        <a href="/scheduler" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">排程</a>
+        <a href="/workers" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">技師</a>
+        <a href="/db/orders" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">H2 Orders</a>
+      </div>
+    </div>
+
+<div class="space-y-3">
+  <form method="get" action="/jobs" class="flex items-center gap-2">
+    <input class="w-72 rounded-2xl border px-3 py-2 text-sm" name="q" placeholder="搜尋工單 / 地址 / 客戶" th:value="${q}"/>
+    <button class="px-3 py-1.5 rounded-2xl border bg-gray-100">篩選</button>
+  </form>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="bg-white rounded-2xl border shadow-sm p-4" th:each="j : ${jobs}">
+      <div class="flex items-center gap-2 text-sm mb-1">
+        <span class="font-semibold" th:text="${j.jobId}">JOB-XXXX</span>
+        <span class="inline-flex items-center rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-xs" th:if="${j.status=='Planned'}">已排程</span>
+        <span class="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs" th:if="${j.status=='Assigned'}">已指派</span>
+        <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-2 py-0.5 text-xs" th:if="${j.status=='Draft'}">草稿</span>
+      </div>
+      <div class="text-sm text-gray-700">
+        <span th:text="${j.customerName}">客戶</span><span class="text-gray-500"> · </span><span th:text="${j.address}">地址</span>
+      </div>
+      <div class="mt-2"><a class="px-3 py-1.5 rounded-xl border hover:bg-gray-50 text-sm" th:href="@{'/jobs/' + ${j.jobId}}">查看</a></div>
+    </div>
+  </div>
+</div>
+
+  </div>
+</body>
+</html>
