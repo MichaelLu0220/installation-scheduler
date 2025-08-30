@@ -33,11 +33,20 @@
       <artifactId>spring-boot-starter-validation</artifactId>
     </dependency>
 
-    <!-- JDBC + H2 for dev -->
+    <!-- JDBC -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-jdbc</artifactId>
     </dependency>
+    
+    <!-- SQL Server Driver -->
+    <dependency>
+      <groupId>com.microsoft.sqlserver</groupId>
+      <artifactId>mssql-jdbc</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    
+    <!-- H2 for dev (keep as backup) -->
     <dependency>
       <groupId>com.h2database</groupId>
       <artifactId>h2</artifactId>
