@@ -1,39 +1,49 @@
 package com.example.installation.web;
 
 import com.example.installation.service.JobService;
+import com.example.installation.db.DbOrderService;
+import com.example.installation.db.DbOrder;
+import com.example.installation.db.InventoryStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.util.List;
+
 @Controller
 public class PageController {
     private final JobService jobService;
+    private final DbOrderService dbOrderService;
     
-    public PageController(JobService jobService) {
+    public PageController(JobService jobService, DbOrderService dbOrderService) {
         this.jobService = jobService;
+        this.dbOrderService = dbOrderService;
     }
 
     @GetMapping({"/", "/dashboard"})
     public String dashboard(Model model) {
-        model.addAttribute("jobs", jobService.list());
-        long atRisk = jobService.list().stream()
-            .filter(j -> j.getBom().stream()
-                .anyMatch(b -> (b.getReservedQty() == null ? 0 : b.getReservedQty()) < b.getQty()))
-            .count();
-        long completed = jobService.list().stream()
-            .filter(j -> "Completed".equals(j.getStatus()))
-            .count();
-        int progress = (int) Math.round((completed * 100.0) / Math.max(1, jobService.list().size()));
+        // 從資料庫獲取真實數據
+        List<DbOrder> orders = dbOrderService.list();
+        List<InventoryStatus> inventoryStatus = dbOrderService.getInventoryStatus();
+        DbOrderService.DashboardStats stats = dbOrderService.getDashboardStats();
         
-        model.addAttribute("atRisk", atRisk);
-        model.addAttribute("progress", progress);
+        // 添加到模型
+        model.addAttribute("orders", orders);
+        model.addAttribute("inventoryStatus", inventoryStatus);
+        model.addAttribute("inboundPlans", dbOrderService.getUpcomingInboundPlans(10)); // 只顯示最近10個到貨計劃
+        model.addAttribute("totalOrders", stats.getTotalOrders());
+        model.addAttribute("atRiskOrders", stats.getAtRiskOrders());
+        model.addAttribute("onTimeRate", stats.getOnTimeRate());
+        model.addAttribute("lowStockMaterials", stats.getLowStockMaterials());
+        
         return "dashboard";
     }
 
     @GetMapping("/jobs")
     public String jobs(@RequestParam(value = "q", required = false) String q, Model model) {
+        // 保持原有的JobService邏輯，但可以考慮之後整合到DbOrderService
         model.addAttribute("jobs", jobService.search(q));
         model.addAttribute("q", q == null ? "" : q);
         return "jobs";
@@ -47,18 +57,24 @@ public class PageController {
     }
 
     @GetMapping("/scheduler")
-    public String scheduler() {
+    public String scheduler(Model model) {
+        // 從DB載入排程資料
+        List<DbOrder> orders = dbOrderService.list();
+        model.addAttribute("orders", orders);
         return "scheduler";
     }
 
     @GetMapping("/workers")
-    public String workers() {
+    public String workers(Model model) {
+        // 從DB載入工人產能資料
+        model.addAttribute("workerCapacity", dbOrderService.getWorkerCapacity());
         return "workers";
     }
     
-    // 新增：訂單輸入頁面
     @GetMapping("/order-input") 
-    public String orderInput() {
+    public String orderInput(Model model) {
+        // 為新增訂單頁面提供庫存資訊
+        model.addAttribute("inventoryStatus", dbOrderService.getInventoryStatus());
         return "order-input";
     }
 }

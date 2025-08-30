@@ -3,86 +3,114 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>新增安裝訂單</title>
+  <title>新增安裝訂單 - 智慧安裝排程平台</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="min-h-screen bg-gradient-to-b from-gray-50 to-white">
   <div class="max-w-4xl mx-auto p-6">
     <!-- 標題列 -->
     <div class="flex items-center gap-3 mb-6">
-      <a class="px-4 py-2 rounded-xl border border-gray-300 hover:bg-white transition-colors" href="/db/orders">← 返回總覽</a>
+      <a class="px-4 py-2 rounded-xl border border-gray-300 hover:bg-white transition-colors" href="/dashboard">← 返回總覽</a>
       <div class="text-2xl font-bold text-gray-900">新增安裝訂單</div>
-      <span class="ml-2 inline-flex items-center rounded-full bg-green-100 text-green-800 px-3 py-1 text-sm font-medium">測試插單功能</span>
+      <span class="ml-2 inline-flex items-center rounded-full bg-green-100 text-green-800 px-3 py-1 text-sm font-medium">智慧排程系統</span>
     </div>
 
-    <!-- 當前庫存狀況提醒 -->
+    <!-- 當前庫存狀況提醒 - 從資料庫動態載入 -->
     <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-      <h3 class="font-semibold text-blue-900 mb-2">🔍 當前庫存狀況</h3>
-      <div class="grid grid-cols-3 gap-4 text-sm">
-        <div class="text-center">
-          <div class="font-mono text-lg text-blue-700">30</div>
-          <div class="text-blue-600">氮氣管</div>
-        </div>
-        <div class="text-center">
-          <div class="font-mono text-lg text-blue-700">20</div>
-          <div class="text-blue-600">水管</div>
-        </div>
-        <div class="text-center">
-          <div class="font-mono text-lg text-blue-700">10</div>
-          <div class="text-blue-600">真空管</div>
+      <h3 class="font-semibold text-blue-900 mb-3">🔍 當前庫存狀況</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="text-center bg-white rounded-lg p-3" th:each="inv : ${inventoryStatus}">
+          <div class="text-2xl font-mono font-bold" 
+               th:classappend="${inv.hasShortage()} ? 'text-red-600' : 'text-blue-700'"
+               th:text="${inv.qtyOnHand}">0</div>
+          <div class="text-sm" 
+               th:classappend="${inv.hasShortage()} ? 'text-red-600' : 'text-blue-600'"
+               th:text="${inv.material}">材料名稱</div>
+          <div class="text-xs text-gray-500 mt-1">
+            總需求: <span th:text="${inv.totalDemand}">0</span>
+            <span th:if="${inv.hasShortage()}" class="text-red-500 font-medium">
+              (缺 <span th:text="${inv.shortage}">0</span>)
+            </span>
+          </div>
+          <!-- 庫存進度條 -->
+          <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+            <div class="h-1.5 rounded-full transition-all"
+                 th:classappend="${inv.hasShortage()} ? 'bg-red-500' : 'bg-blue-500'"
+                 th:style="'width: ' + ${inv.qtyOnHand * 100 / Math.max(inv.totalDemand, 1)} + '%'"></div>
+          </div>
         </div>
       </div>
-      <div class="mt-2 text-xs text-blue-700">
-        💡 提示：系統將根據截止日期自動安排優先順序
+      <div class="mt-3 text-xs text-blue-700 bg-blue-100 rounded p-2">
+        💡 <strong>智慧提示：</strong>系統將根據庫存狀況和截止日期自動優化排程順序，確保材料充足的訂單優先處理。
       </div>
     </div>
 
     <!-- 訂單輸入表單 -->
-    <form id="orderForm" class="bg-white rounded-2xl border border-gray-200 shadow-sm">
+    <form id="orderForm" action="/orders/create" method="post" class="bg-white rounded-2xl border border-gray-200 shadow-sm">
       <div class="px-6 py-4 border-b border-gray-100">
         <h3 class="text-lg font-semibold text-gray-900">訂單基本資料</h3>
+        <p class="text-sm text-gray-500 mt-1">請填寫機台資訊和材料需求，系統將自動進行排程計算</p>
       </div>
       <div class="p-6 space-y-6">
         <!-- 機台資訊 -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">機台名稱</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              機台名稱 <span class="text-red-500">*</span>
+            </label>
             <input type="text" name="machineName" required
-                   placeholder="例：M3" 
-                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                   placeholder="例：M3, M4..." 
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                   pattern="^M\d+$" 
+                   title="請輸入格式如 M3, M4 的機台名稱">
+            <div class="text-xs text-gray-500 mt-1">格式：M + 數字 (如 M3)</div>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">截止日期</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              期望完成日期 <span class="text-red-500">*</span>
+            </label>
             <input type="date" name="dueDate" required
                    min="2025-08-15" max="2025-12-31"
                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <div class="text-xs text-gray-500 mt-1" id="dueDateHint">系統將根據此日期安排優先順序</div>
           </div>
         </div>
 
         <!-- 材料需求 -->
         <div>
           <h4 class="text-base font-semibold text-gray-900 mb-4">材料需求量</h4>
+          <p class="text-sm text-gray-600 mb-4">請輸入各種材料的需求數量，系統會自動檢查庫存並安排到貨計劃</p>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="border border-gray-200 rounded-lg p-4">
-              <label class="block text-sm font-medium text-gray-700 mb-2">氮氣管</label>
-              <input type="number" name="nitrogenPipe" min="0" max="1000" 
+            <div class="border rounded-lg p-4" th:each="inv, iterStat : ${inventoryStatus}"
+                 th:classappend="${inv.hasShortage()} ? 'border-red-300 bg-red-50' : 'border-gray-200'">
+              <label class="block text-sm font-medium mb-2"
+                     th:classappend="${inv.hasShortage()} ? 'text-red-700' : 'text-gray-700'"
+                     th:text="${inv.material}">材料名稱</label>
+              
+              <input type="number" 
+                     th:name="${inv.material == '氮氣管'} ? 'nitrogenPipe' : (${inv.material == '水管'} ? 'waterPipe' : 'vacuumPipe')"
+                     min="0" max="1000" step="1"
                      placeholder="0" 
-                     class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-              <div class="text-xs text-gray-500 mt-1">單位：公尺</div>
-            </div>
-            <div class="border border-gray-200 rounded-lg p-4">
-              <label class="block text-sm font-medium text-gray-700 mb-2">水管</label>
-              <input type="number" name="waterPipe" min="0" max="1000"
-                     placeholder="0"
-                     class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-              <div class="text-xs text-gray-500 mt-1">單位：公尺</div>
-            </div>
-            <div class="border border-gray-200 rounded-lg p-4">
-              <label class="block text-sm font-medium text-gray-700 mb-2">真空管</label>
-              <input type="number" name="vacuumPipe" min="0" max="1000"
-                     placeholder="0"
-                     class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-              <div class="text-xs text-gray-500 mt-1">單位：公尺</div>
+                     class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 material-input"
+                     th:data-material="${inv.material}"
+                     th:data-available="${inv.qtyOnHand}">
+              
+              <div class="text-xs mt-2">
+                <div class="text-gray-600">單位：公尺</div>
+                <div th:classappend="${inv.hasShortage()} ? 'text-red-600' : 'text-green-600'">
+                  目前庫存：<span class="font-mono" th:text="${inv.qtyOnHand}">0</span>
+                </div>
+                <div class="text-gray-500">
+                  既有需求：<span class="font-mono" th:text="${inv.totalDemand}">0</span>
+                </div>
+              </div>
+              
+              <!-- 即時提示區域 -->
+              <div class="material-hint mt-2 text-xs hidden">
+                <div class="p-2 rounded bg-gray-100">
+                  <span class="hint-text"></span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -90,18 +118,21 @@
         <!-- 快速測試場景 -->
         <div>
           <h4 class="text-base font-semibold text-gray-900 mb-4">🚀 快速測試場景</h4>
+          <p class="text-sm text-gray-600 mb-4">點擊下方按鈕快速填入測試數據，驗證排程功能</p>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button type="button" onclick="fillTestScenario1()" 
-                    class="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
-              <div class="text-sm font-medium">情境二：急件插單</div>
-              <div class="text-xs text-gray-500 mt-1">M2 機台，2025/10/01 截止</div>
-              <div class="text-xs text-gray-500">氮氣管80，水管50，真空管30</div>
+                    class="p-4 border-2 border-dashed border-blue-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
+              <div class="text-sm font-medium text-blue-700">情境：急件插單測試</div>
+              <div class="text-xs text-blue-600 mt-1">M2 機台，2025/10/01 截止</div>
+              <div class="text-xs text-blue-600">氮氣管80，水管50，真空管30</div>
+              <div class="text-xs text-blue-500 mt-1">⚡ 模擬緊急訂單插入現有排程</div>
             </button>
             <button type="button" onclick="fillTestScenario2()" 
-                    class="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors">
-              <div class="text-sm font-medium">自定義測試</div>
-              <div class="text-xs text-gray-500 mt-1">M3 機台，2025/11/15 截止</div>
-              <div class="text-xs text-gray-500">氮氣管40，水管30，真空管20</div>
+                    class="p-4 border-2 border-dashed border-green-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors">
+              <div class="text-sm font-medium text-green-700">情境：常規訂單測試</div>
+              <div class="text-xs text-green-600 mt-1">M3 機台，2025/11/15 截止</div>
+              <div class="text-xs text-green-600">氮氣管40，水管30，真空管20</div>
+              <div class="text-xs text-green-500 mt-1">📅 模擬較寬鬆時間的訂單</div>
             </button>
           </div>
         </div>
@@ -109,16 +140,17 @@
         <!-- 提交按鈕 -->
         <div class="flex items-center justify-between pt-6 border-t border-gray-100">
           <div class="text-sm text-gray-500">
-            策略固定為 <span class="font-mono bg-gray-100 px-2 py-1 rounded">Partial</span> (分批處理模式)
+            <div>策略模式：<span class="font-mono bg-gray-100 px-2 py-1 rounded">Partial</span> (分批處理模式)</div>
+            <div class="text-xs text-gray-400 mt-1">系統將根據材料到貨情況分批執行安裝任務</div>
           </div>
           <div class="flex gap-3">
             <button type="button" onclick="previewOrder()" 
                     class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-              預覽影響
+              🔍 預覽影響
             </button>
             <button type="submit" 
                     class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              提交訂單
+              ✅ 提交訂單
             </button>
           </div>
         </div>
@@ -129,6 +161,7 @@
     <div id="previewResult" class="hidden mt-6 bg-white rounded-2xl border border-gray-200 shadow-sm">
       <div class="px-6 py-4 border-b border-gray-100">
         <h3 class="text-lg font-semibold text-gray-900">📊 排程影響預覽</h3>
+        <p class="text-sm text-gray-500 mt-1">基於當前庫存和既有訂單的初步分析</p>
       </div>
       <div class="p-6">
         <div id="previewContent">
@@ -137,9 +170,78 @@
       </div>
     </div>
 
+    <!-- 成功/錯誤訊息 -->
+    <div th:if="${param.success}" class="mt-4 bg-green-50 border border-green-200 rounded-xl p-4">
+      <div class="text-green-800 font-medium">✅ 訂單建立成功！</div>
+      <div class="text-green-700 text-sm mt-1" th:text="${param.success}">系統正在重新計算排程...</div>
+    </div>
+    
+    <div th:if="${param.error}" class="mt-4 bg-red-50 border border-red-200 rounded-xl p-4">
+      <div class="text-red-800 font-medium">❌ 訂單建立失敗</div>
+      <div class="text-red-700 text-sm mt-1" th:text="${param.error}">請檢查輸入資料</div>
+    </div>
+
   </div>
 
   <script>
+    // 材料輸入即時檢查
+    document.addEventListener('DOMContentLoaded', function() {
+      const materialInputs = document.querySelectorAll('.material-input');
+      
+      materialInputs.forEach(input => {
+        input.addEventListener('input', function() {
+          checkMaterialRequirement(this);
+        });
+      });
+      
+      // 設定最小日期為今天
+      const today = new Date().toISOString().split('T')[0];
+      document.querySelector('input[name="dueDate"]').min = today;
+      
+      // 日期選擇提示
+      document.querySelector('input[name="dueDate"]').addEventListener('change', function() {
+        const selectedDate = new Date(this.value);
+        const today = new Date();
+        const daysDiff = Math.ceil((selectedDate - today) / (1000 * 60 * 60 * 24));
+        
+        const hintElement = document.getElementById('dueDateHint');
+        if (daysDiff < 30) {
+          hintElement.textContent = `⚡ 急件 (${daysDiff}天後) - 將優先排程`;
+          hintElement.className = 'text-xs text-orange-600 mt-1 font-medium';
+        } else if (daysDiff < 90) {
+          hintElement.textContent = `📅 標準期程 (${daysDiff}天後) - 正常排程`;
+          hintElement.className = 'text-xs text-green-600 mt-1';
+        } else {
+          hintElement.textContent = `🕐 寬鬆期程 (${daysDiff}天後) - 可靈活安排`;
+          hintElement.className = 'text-xs text-blue-600 mt-1';
+        }
+      });
+    });
+
+    function checkMaterialRequirement(input) {
+      const requested = parseInt(input.value) || 0;
+      const available = parseInt(input.dataset.available) || 0;
+      const materialName = input.dataset.material;
+      const hintElement = input.parentElement.querySelector('.material-hint');
+      const hintText = hintElement.querySelector('.hint-text');
+      
+      if (requested === 0) {
+        hintElement.classList.add('hidden');
+        return;
+      }
+      
+      hintElement.classList.remove('hidden');
+      
+      if (requested <= available) {
+        hintElement.querySelector('.p-2').className = 'p-2 rounded bg-green-100';
+        hintText.innerHTML = `✅ 庫存充足：需要 ${requested}，可用 ${available}`;
+      } else {
+        hintElement.querySelector('.p-2').className = 'p-2 rounded bg-yellow-100';
+        const shortage = requested - available;
+        hintText.innerHTML = `⚠️ 需補料：需要 ${requested}，庫存 ${available}，缺 ${shortage}<br><small class="text-gray-600">系統將安排分批到貨處理</small>`;
+      }
+    }
+
     // 測試場景填入功能
     function fillTestScenario1() {
       document.querySelector('input[name="machineName"]').value = 'M2';
@@ -147,6 +249,14 @@
       document.querySelector('input[name="nitrogenPipe"]').value = '80';
       document.querySelector('input[name="waterPipe"]').value = '50';
       document.querySelector('input[name="vacuumPipe"]').value = '30';
+      
+      // 觸發檢查
+      document.querySelectorAll('.material-input').forEach(input => {
+        if (input.value) checkMaterialRequirement(input);
+      });
+      
+      // 觸發日期提示
+      document.querySelector('input[name="dueDate"]').dispatchEvent(new Event('change'));
     }
 
     function fillTestScenario2() {
@@ -155,6 +265,14 @@
       document.querySelector('input[name="nitrogenPipe"]').value = '40';
       document.querySelector('input[name="waterPipe"]').value = '30';
       document.querySelector('input[name="vacuumPipe"]').value = '20';
+      
+      // 觸發檢查
+      document.querySelectorAll('.material-input').forEach(input => {
+        if (input.value) checkMaterialRequirement(input);
+      });
+      
+      // 觸發日期提示
+      document.querySelector('input[name="dueDate"]').dispatchEvent(new Event('change'));
     }
 
     // 預覽功能
@@ -162,7 +280,11 @@
       const formData = new FormData(document.getElementById('orderForm'));
       const orderData = Object.fromEntries(formData);
       
-      // 模擬排程計算預覽
+      if (!orderData.machineName || !orderData.dueDate) {
+        alert('請先填寫機台名稱和截止日期');
+        return;
+      }
+      
       showPreview(orderData);
     }
 
@@ -170,56 +292,95 @@
       const previewDiv = document.getElementById('previewResult');
       const contentDiv = document.getElementById('previewContent');
       
-      // 簡單的影響分析展示
+      const materials = [
+        { name: '氮氣管', need: parseInt(orderData.nitrogenPipe) || 0, stock: 30 },
+        { name: '水管', need: parseInt(orderData.waterPipe) || 0, stock: 20 },
+        { name: '真空管', need: parseInt(orderData.vacuumPipe) || 0, stock: 10 }
+      ];
+      
+      const totalNeed = materials.reduce((sum, m) => sum + m.need, 0);
+      const hasShortage = materials.some(m => m.need > m.stock);
+      
       contentDiv.innerHTML = `
         <div class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 class="font-medium text-blue-900">📦 材料需求分析</h4>
+              <div class="mt-2 space-y-2">
+                ${materials.map(m => `
+                  <div class="flex justify-between text-sm ${m.need > m.stock ? 'text-orange-700' : 'text-blue-700'}">
+                    <span>${m.name}：${m.need}</span>
+                    <span>庫存：${m.stock} ${m.need > m.stock ? '⚠️' : '✅'}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h4 class="font-medium text-gray-900">📅 排程分析</h4>
+              <div class="mt-2 text-sm text-gray-700">
+                <div>機台：${orderData.machineName}</div>
+                <div>截止：${orderData.dueDate}</div>
+                <div>總需求：${totalNeed} 單位</div>
+                <div class="mt-2 ${hasShortage ? 'text-orange-700' : 'text-green-700'}">
+                  ${hasShortage ? '⚠️ 需要等待分批到貨' : '✅ 可立即開始處理'}
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <h4 class="font-medium text-yellow-900">⚠️ 材料需求分析</h4>
+            <h4 class="font-medium text-yellow-900">⚡ 排程影響預測</h4>
             <div class="mt-2 text-sm text-yellow-800">
-              <div>氮氣管需求：${orderData.nitrogenPipe || 0} (庫存：30)</div>
-              <div>水管需求：${orderData.waterPipe || 0} (庫存：20)</div>
-              <div>真空管需求：${orderData.vacuumPipe || 0} (庫存：10)</div>
+              <div>• 新訂單將依截止日期 ${orderData.dueDate} 插入排程序列</div>
+              <div>• ${hasShortage ? '部分材料需等待8-9月分批到貨' : '材料庫存充足，可優先處理'}</div>
+              <div>• 可能影響既有訂單 M1、M2 的資源分配</div>
             </div>
           </div>
-          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 class="font-medium text-blue-900">📅 排程影響</h4>
-            <div class="mt-2 text-sm text-blue-800">
-              新訂單將依截止日期 ${orderData.dueDate} 插入排程序列。<br>
-              可能影響既有訂單 M1、M2 的完成時間。
-            </div>
-          </div>
-          <div class="text-sm text-gray-600">
-            <strong>提示：</strong>實際排程結果將在提交後由系統計算產生。
+          
+          <div class="text-sm text-gray-600 bg-gray-50 rounded p-3">
+            <strong>💡 提示：</strong>這是基於當前數據的初步預覽，實際排程結果將在提交後由系統精確計算。系統會考慮工人產能、材料到貨時間等所有因素。
           </div>
         </div>
       `;
       
       previewDiv.classList.remove('hidden');
+      previewDiv.scrollIntoView({ behavior: 'smooth' });
     }
 
     // 表單提交處理
     document.getElementById('orderForm').addEventListener('submit', function(e) {
-      e.preventDefault();
+      const machineName = document.querySelector('input[name="machineName"]').value;
+      const dueDate = document.querySelector('input[name="dueDate"]').value;
       
-      const formData = new FormData(e.target);
-      const orderData = Object.fromEntries(formData);
+      if (!machineName || !dueDate) {
+        e.preventDefault();
+        alert('請填寫必填欄位：機台名稱和截止日期');
+        return;
+      }
       
-      // 這裡可以發送到後端API
-      console.log('提交訂單:', orderData);
+      // 檢查機台名稱格式
+      if (!/^M\d+$/.test(machineName)) {
+        e.preventDefault();
+        alert('機台名稱格式錯誤，請輸入如 M3, M4 的格式');
+        return;
+      }
       
-      // 模擬提交成功
-      alert('訂單提交成功！系統正在重新計算排程...');
+      // 檢查是否至少有一個材料需求
+      const nitrogenPipe = parseInt(document.querySelector('input[name="nitrogenPipe"]').value) || 0;
+      const waterPipe = parseInt(document.querySelector('input[name="waterPipe"]').value) || 0;
+      const vacuumPipe = parseInt(document.querySelector('input[name="vacuumPipe"]').value) || 0;
       
-      // 跳轉回總覽頁面
-      setTimeout(() => {
-        window.location.href = '/db/orders';
-      }, 1500);
-    });
-
-    // 自動設定今天為最小日期
-    document.addEventListener('DOMContentLoaded', function() {
-      const today = new Date().toISOString().split('T')[0];
-      document.querySelector('input[name="dueDate"]').min = today;
+      if (nitrogenPipe === 0 && waterPipe === 0 && vacuumPipe === 0) {
+        e.preventDefault();
+        alert('請至少填寫一種材料的需求量');
+        return;
+      }
+      
+      // 顯示提交中狀態
+      const submitBtn = this.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '⏳ 提交中...';
     });
   </script>
 </body>

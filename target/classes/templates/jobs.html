@@ -2,44 +2,160 @@
 <html lang="zh-Hant" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>智慧安裝排程平台</title>
+  <title>工單管理 - 智慧安裝排程平台</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="min-h-screen bg-gradient-to-b from-gray-50 to-white">
   <div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- 優化後的導航欄 -->
     <div class="flex items-center gap-3 mb-5">
       <div class="text-xl font-semibold">智慧安裝排程平台</div>
-      <span class="ml-2 inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-2 py-0.5 text-xs">Tomcat WAR + H2</span>
+      <span class="ml-2 inline-flex items-center rounded-full bg-blue-100 text-blue-800 px-2 py-0.5 text-xs">SQL Server</span>
       <div class="ml-auto flex items-center gap-2">
-        <a href="/dashboard" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">Dashboard</a>
-        <a href="/jobs" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">工單</a>
-        <a href="/scheduler" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">排程</a>
-        <a href="/workers" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">技師</a>
-        <a href="/db/orders" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">H2 Orders</a>
+        <a href="/dashboard" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">總覽</a>
+        <a href="/jobs" class="px-3 py-1.5 rounded-xl border bg-blue-600 text-white">工單管理</a>
+        <a href="/scheduler" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">排程檢視</a>
+        <a href="/workers" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">技師管理</a>
+        <a href="/db/orders" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">資料總覽</a>
+        <a href="/order-input" class="px-3 py-1.5 rounded-xl border bg-green-600 text-white hover:bg-green-700">新增訂單</a>
       </div>
     </div>
 
-<div class="space-y-3">
-  <form method="get" action="/jobs" class="flex items-center gap-2">
-    <input class="w-72 rounded-2xl border px-3 py-2 text-sm" name="q" placeholder="搜尋工單 / 地址 / 客戶" th:value="${q}"/>
-    <button class="px-3 py-1.5 rounded-2xl border bg-gray-100">篩選</button>
-  </form>
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-    <div class="bg-white rounded-2xl border shadow-sm p-4" th:each="j : ${jobs}">
-      <div class="flex items-center gap-2 text-sm mb-1">
-        <span class="font-semibold" th:text="${j.jobId}">JOB-XXXX</span>
-        <span class="inline-flex items-center rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-xs" th:if="${j.status=='Planned'}">已排程</span>
-        <span class="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs" th:if="${j.status=='Assigned'}">已指派</span>
-        <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-2 py-0.5 text-xs" th:if="${j.status=='Draft'}">草稿</span>
+    <div class="space-y-4">
+      <!-- 搜尋和統計區域 -->
+      <div class="bg-white rounded-2xl border shadow-sm p-4">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold">工單管理</h2>
+          <div class="flex items-center gap-2 text-sm text-gray-600">
+            <span>共 <span class="font-medium" th:text="${#lists.size(jobs)}">0</span> 個工單</span>
+          </div>
+        </div>
+        
+        <form method="get" action="/jobs" class="flex items-center gap-3">
+          <div class="flex-1">
+            <input class="w-full rounded-xl border border-gray-300 px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                   name="q" 
+                   placeholder="搜尋工單編號、地址或客戶名稱..." 
+                   th:value="${q}"/>
+          </div>
+          <button class="px-4 py-2 rounded-xl border bg-gray-50 hover:bg-gray-100 text-sm font-medium">
+            🔍 搜尋
+          </button>
+          <a href="/jobs" class="px-4 py-2 rounded-xl border hover:bg-gray-50 text-sm">
+            清除
+          </a>
+        </form>
       </div>
-      <div class="text-sm text-gray-700">
-        <span th:text="${j.customerName}">客戶</span><span class="text-gray-500"> · </span><span th:text="${j.address}">地址</span>
-      </div>
-      <div class="mt-2"><a class="px-3 py-1.5 rounded-xl border hover:bg-gray-50 text-sm" th:href="@{'/jobs/' + ${j.jobId}}">查看</a></div>
-    </div>
-  </div>
-</div>
 
+      <!-- 工單列表 -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="bg-white rounded-2xl border shadow-sm p-4 hover:shadow-md transition-shadow" th:each="j : ${jobs}">
+          <div class="flex items-center gap-2 text-sm mb-2">
+            <span class="font-semibold text-base" th:text="${j.jobId}">JOB-XXXX</span>
+            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                  th:classappend="${j.status=='Planned'} ? 'bg-blue-100 text-blue-700' : 
+                                  (${j.status=='Assigned'} ? 'bg-emerald-100 text-emerald-700' : 
+                                  'bg-gray-100 text-gray-700')"
+                  th:text="${j.status=='Planned'} ? '已排程' : 
+                           (${j.status=='Assigned'} ? '已指派' : '草稿')">狀態</span>
+            
+            <!-- 優先級標示 -->
+            <span th:if="${j.priority == 'High'}" class="inline-flex items-center rounded-full bg-red-100 text-red-700 px-2 py-0.5 text-xs font-medium">
+              🔥 高優先
+            </span>
+            <span th:if="${j.priority == 'Normal'}" class="inline-flex items-center rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-xs font-medium">
+              📅 標準
+            </span>
+          </div>
+          
+          <div class="text-sm text-gray-700 mb-3">
+            <div class="font-medium" th:text="${j.customerName}">客戶名稱</div>
+            <div class="text-gray-600" th:text="${j.address}">地址</div>
+            <div class="text-gray-500 mt-1">
+              電話: <span th:text="${j.customerPhone}">電話</span>
+            </div>
+          </div>
+
+          <!-- 時間資訊 -->
+          <div class="text-sm text-gray-600 mb-3" th:if="${j.start != null}">
+            <div class="flex items-center gap-2">
+              <span class="text-gray-500">📅 排程時段:</span>
+              <span th:text="${j.start}">開始時間</span>
+              <span th:if="${j.end != null}">
+                - <span th:text="${j.end}">結束時間</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- 材料需求摘要 -->
+          <div class="mb-3" th:if="${!#lists.isEmpty(j.bom)}">
+            <div class="text-xs text-gray-500 mb-1">材料需求:</div>
+            <div class="flex gap-1 flex-wrap">
+              <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs border"
+                    th:each="b : ${j.bom}"
+                    th:classappend="${(b.reservedQty ?: 0) >= b.qty} ? 'bg-green-50 text-green-700 border-green-200' : 'bg-amber-50 text-amber-700 border-amber-200'">
+                <span th:text="${b.name}">材料</span>: 
+                <span th:text="${b.qty}">數量</span>
+                <span th:if="${(b.reservedQty ?: 0) >= b.qty}" class="ml-1">✅</span>
+                <span th:if="${(b.reservedQty ?: 0) < b.qty}" class="ml-1">⚠️</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- SLA到期提醒 -->
+          <div class="text-xs text-gray-500 mb-3" th:if="${j.slaDue != null}">
+            SLA到期: <span th:text="${j.slaDue}">到期時間</span>
+          </div>
+
+          <!-- 指派技師 -->
+          <div class="mb-3" th:if="${!#lists.isEmpty(j.assigned)}">
+            <div class="text-xs text-gray-500 mb-1">指派技師:</div>
+            <div class="flex gap-1">
+              <span class="inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-2 py-0.5 text-xs"
+                    th:each="worker : ${j.assigned}"
+                    th:text="${worker}">技師編號</span>
+            </div>
+          </div>
+          
+          <!-- 操作按鈕 -->
+          <div class="flex gap-2 pt-3 border-t border-gray-100">
+            <a class="px-3 py-1.5 rounded-xl border hover:bg-gray-50 text-sm flex-1 text-center" 
+               th:href="@{'/jobs/' + ${j.jobId}}">
+               📋 查看詳情
+            </a>
+            <button class="px-3 py-1.5 rounded-xl border hover:bg-blue-50 hover:border-blue-300 text-sm text-blue-600">
+              ✏️ 編輯
+            </button>
+          </div>
+        </div>
+        
+        <!-- 如果沒有工單 -->
+        <div th:if="${#lists.isEmpty(jobs)}" class="col-span-2 bg-white rounded-2xl border shadow-sm p-8 text-center">
+          <div class="text-gray-500">
+            <div class="text-4xl mb-4">📋</div>
+            <div class="text-lg mb-2">
+              <span th:if="${q != null and !q.isEmpty()}">找不到符合條件的工單</span>
+              <span th:unless="${q != null and !q.isEmpty()}">尚無工單資料</span>
+            </div>
+            <div class="text-sm">
+              <span th:if="${q != null and !q.isEmpty()}">
+                請嘗試其他搜尋關鍵字，或 
+                <a href="/jobs" class="text-blue-600 hover:text-blue-800">檢視所有工單</a>
+              </span>
+              <span th:unless="${q != null and !q.isEmpty()}">
+                點擊上方「新增訂單」開始建立第一個工單
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 搜尋結果提示 -->
+      <div th:if="${q != null and !q.isEmpty()}" class="text-center text-sm text-gray-500">
+        搜尋關鍵字: "<span class="font-medium" th:text="${q}"></span>" 
+        | 找到 <span class="font-medium" th:text="${#lists.size(jobs)}">0</span> 個結果
+      </div>
+    </div>
   </div>
 </body>
 </html>
