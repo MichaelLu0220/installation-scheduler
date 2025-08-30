@@ -2,40 +2,348 @@
 <html lang="zh-Hant" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>智慧安裝排程平台</title>
+  <title>技師管理 - 智慧安裝排程平台</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="min-h-screen bg-gradient-to-b from-gray-50 to-white">
   <div class="max-w-7xl mx-auto px-6 py-6">
+    <!-- 統一的導覽列 -->
     <div class="flex items-center gap-3 mb-5">
       <div class="text-xl font-semibold">智慧安裝排程平台</div>
-      <span class="ml-2 inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-2 py-0.5 text-xs">Tomcat WAR + H2</span>
+      <span class="ml-2 inline-flex items-center rounded-full bg-blue-100 text-blue-800 px-2 py-0.5 text-xs">Firsttech Demo</span>
       <div class="ml-auto flex items-center gap-2">
-        <a href="/dashboard" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">Dashboard</a>
-        <a href="/jobs" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">工單</a>
-        <a href="/scheduler" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">排程</a>
-        <a href="/workers" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">技師</a>
-        <a href="/db/orders" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">H2 Orders</a>
+        <a href="/dashboard" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">總覽</a>
+        <a href="/jobs" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">工單管理</a>
+        <a href="/scheduler" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">排程檢視</a>
+        <a href="/workers" class="px-3 py-1.5 rounded-xl border bg-blue-600 text-white">技師管理</a>
+        <a href="/db/orders" class="px-3 py-1.5 rounded-xl border hover:bg-gray-50">資料總覽</a>
+        <a href="/order-input" class="px-3 py-1.5 rounded-xl border bg-green-600 text-white hover:bg-green-700">新增訂單</a>
       </div>
     </div>
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-  <div class="bg-white rounded-2xl border shadow-sm p-4">
-    <div class="font-semibold mb-2">林技師</div>
-    <div class="text-sm">技能：<span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-2 py-0.5 text-xs mr-1">220v</span>
-      <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-2 py-0.5 text-xs mr-1">吊掛</span></div>
-    <div class="text-sm mt-1">服務區：台北</div>
-    <div class="text-sm mt-1">狀態：<span class="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs">可用</span></div>
-  </div>
-  <div class="bg-white rounded-2xl border shadow-sm p-4">
-    <div class="font-semibold mb-2">黃技師</div>
-    <div class="text-sm">技能：<span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-2 py-0.5 text-xs mr-1">瓦斯</span>
-      <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-2 py-0.5 text-xs mr-1">220v</span></div>
-    <div class="text-sm mt-1">服務區：新北</div>
-    <div class="text-sm mt-1">狀態：<span class="inline-flex items-center rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs">忙碌</span></div>
-  </div>
-</div>
+    <!-- 技師管理內容 -->
+    <div class="space-y-6">
+      <!-- 技師統計總覽 -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-2xl border shadow-sm p-4">
+          <div class="text-sm text-gray-500">總技師數</div>
+          <div class="text-2xl font-bold text-blue-600">3</div>
+          <div class="text-xs text-gray-400 mt-1">系統中的所有技師</div>
+        </div>
+        <div class="bg-white rounded-2xl border shadow-sm p-4">
+          <div class="text-sm text-gray-500">可用技師</div>
+          <div class="text-2xl font-bold text-green-600">2</div>
+          <div class="text-xs text-gray-400 mt-1">今日可調派技師</div>
+        </div>
+        <div class="bg-white rounded-2xl border shadow-sm p-4">
+          <div class="text-sm text-gray-500">忙碌技師</div>
+          <div class="text-2xl font-bold text-orange-600">1</div>
+          <div class="text-xs text-gray-400 mt-1">正在執行任務</div>
+        </div>
+        <div class="bg-white rounded-2xl border shadow-sm p-4">
+          <div class="text-sm text-gray-500">總工時 (日)</div>
+          <div class="text-2xl font-bold text-purple-600" th:text="${workerCapacity[0]?.totalUnitsPerDay ?: 24}">24</div>
+          <div class="text-xs text-gray-400 mt-1">每日總處理能力</div>
+        </div>
+      </div>
 
+      <!-- 技師能力配置表 -->
+      <div class="bg-white rounded-2xl border shadow-sm">
+        <div class="px-6 py-4 border-b border-gray-100">
+          <h3 class="text-lg font-semibold text-gray-900">技師能力矩陣</h3>
+          <p class="text-sm text-gray-500">各技師專業技能與適用工作類型</p>
+        </div>
+        <div class="p-6">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-gray-200">
+                  <th class="text-left py-3 px-4 font-medium text-gray-700">技師</th>
+                  <th class="text-center py-3 px-4 font-medium text-gray-700">220v電路</th>
+                  <th class="text-center py-3 px-4 font-medium text-gray-700">瓦斯管路</th>
+                  <th class="text-center py-3 px-4 font-medium text-gray-700">水管配置</th>
+                  <th class="text-center py-3 px-4 font-medium text-gray-700">吊掛安裝</th>
+                  <th class="text-center py-3 px-4 font-medium text-gray-700">系統測試</th>
+                  <th class="text-center py-3 px-4 font-medium text-gray-700">可用區域</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="border-b border-gray-100">
+                  <td class="py-3 px-4 font-medium">林技師</td>
+                  <td class="text-center py-3 px-4">
+                    <span class="inline-flex items-center rounded-full bg-green-100 text-green-700 px-2 py-1 text-xs">✓ 精通</span>
+                  </td>
+                  <td class="text-center py-3 px-4">
+                    <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-500 px-2 py-1 text-xs">✗ 無</span>
+                  </td>
+                  <td class="text-center py-3 px-4">
+                    <span class="inline-flex items-center rounded-full bg-yellow-100 text-yellow-700 px-2 py-1 text-xs">◯ 基礎</span>
+                  </td>
+                  <td class="text-center py-3 px-4">
+                    <span class="inline-flex items-center rounded-full bg-green-100 text-green-700 px-2 py-1 text-xs">✓ 精通</span>
+                  </td>
+                  <td class="text-center py-3 px-4">
+                    <span class="inline-flex items-center rounded-full bg-yellow-100 text-yellow-700 px-2 py-1 text-xs">◯ 基礎</span>
+                  </td>
+                  <td class="text-center py-3 px-4 text-xs">台北、新北</td>
+                </tr>
+                <tr class="border-b border-gray-100">
+                  <td class="py-3 px-4 font-medium">黃技師</td>
+                  <td class="text-center py-3 px-4">
+                    <span class="inline-flex items-center rounded-full bg-yellow-100 text-yellow-700 px-2 py-1 text-xs">◯ 基礎</span>
+                  </td>
+                  <td class="text-center py-3 px-4">
+                    <span class="inline-flex items-center rounded-full bg-green-100 text-green-700 px-2 py-1 text-xs">✓ 精通</span>
+                  </td>
+                  <td class="text-center py-3 px-4">
+                    <span class="inline-flex items-center rounded-full bg-green-100 text-green-700 px-2 py-1 text-xs">✓ 精通</span>
+                  </td>
+                  <td class="text-center py-3 px-4">
+                    <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-500 px-2 py-1 text-xs">✗ 無</span>
+                  </td>
+                  <td class="text-center py-3 px-4">
+                    <span class="inline-flex items-center rounded-full bg-yellow-100 text-yellow-700 px-2 py-1 text-xs">◯ 基礎</span>
+                  </td>
+                  <td class="text-center py-3 px-4 text-xs">新北、桃園</td>
+                </tr>
+                <tr>
+                  <td class="py-3 px-4 font-medium">陳技師</td>
+                  <td class="text-center py-3 px-4">
+                    <span class="inline-flex items-center rounded-full bg-yellow-100 text-yellow-700 px-2 py-1 text-xs">◯ 基礎</span>
+                  </td>
+                  <td class="text-center py-3 px-4">
+                    <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-500 px-2 py-1 text-xs">✗ 無</span>
+                  </td>
+                  <td class="text-center py-3 px-4">
+                    <span class="inline-flex items-center rounded-full bg-yellow-100 text-yellow-700 px-2 py-1 text-xs">◯ 基礎</span>
+                  </td>
+                  <td class="text-center py-3 px-4">
+                    <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-500 px-2 py-1 text-xs">✗ 無</span>
+                  </td>
+                  <td class="text-center py-3 px-4">
+                    <span class="inline-flex items-center rounded-full bg-green-100 text-green-700 px-2 py-1 text-xs">✓ 精通</span>
+                  </td>
+                  <td class="text-center py-3 px-4 text-xs">大台北</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 工作分配建議 -->
+      <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
+        <h4 class="font-semibold text-yellow-900 mb-3">🎯 智慧分配建議</h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div>
+            <h5 class="font-medium text-yellow-800 mb-2">當前最佳配置：</h5>
+            <ul class="space-y-1 text-yellow-700">
+              <li>• <strong>M1 機台：</strong>林技師(主安裝) + 黃技師(配管)</li>
+              <li>• <strong>M2 機台：</strong>陳技師(測試) + 林技師(支援)</li>
+              <li>• <strong>緊急任務：</strong>陳技師可立即調派</li>
+            </ul>
+          </div>
+          <div>
+            <h5 class="font-medium text-yellow-800 mb-2">產能優化建議：</h5>
+            <ul class="space-y-1 text-yellow-700">
+              <li>• 黃技師工時已滿，考慮分散任務</li>
+              <li>• 陳技師可承接更多測試工作</li>
+              <li>• 週末可安排林技師處理積壓工單</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </body>
-</html>
+</html><!-- 技師詳細資料 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- 林技師 -->
+        <div class="bg-white rounded-2xl border shadow-sm">
+          <div class="p-6">
+            <div class="flex items-center gap-4 mb-4">
+              <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <span class="text-blue-600 font-semibold text-lg">林</span>
+              </div>
+              <div>
+                <h3 class="font-semibold text-lg">林技師</h3>
+                <p class="text-sm text-gray-500">資深安裝技師</p>
+              </div>
+            </div>
+            
+            <div class="space-y-3">
+              <div>
+                <div class="text-sm text-gray-600 mb-2">專業技能</div>
+                <div class="flex gap-2 flex-wrap">
+                  <span class="inline-flex items-center rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-xs">220v 電路</span>
+                  <span class="inline-flex items-center rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-xs">吊掛安裝</span>
+                  <span class="inline-flex items-center rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-xs">氮氣管配置</span>
+                </div>
+              </div>
+              
+              <div>
+                <div class="text-sm text-gray-600 mb-2">服務區域</div>
+                <div class="text-sm font-medium">台北市、新北市</div>
+              </div>
+              
+              <div>
+                <div class="text-sm text-gray-600 mb-2">工作狀態</div>
+                <span class="inline-flex items-center rounded-full bg-green-100 text-green-700 px-3 py-1 text-sm font-medium">
+                  ✅ 可用
+                </span>
+              </div>
+              
+              <div>
+                <div class="text-sm text-gray-600 mb-2">本週工作量</div>
+                <div class="flex items-center gap-2">
+                  <div class="flex-1 bg-gray-200 rounded-full h-2">
+                    <div class="bg-blue-600 h-2 rounded-full" style="width: 75%"></div>
+                  </div>
+                  <span class="text-sm font-medium">30/40h</span>
+                </div>
+              </div>
+              
+              <div>
+                <div class="text-sm text-gray-600 mb-2">當前任務</div>
+                <div class="text-sm">M1 機台主要安裝工程</div>
+                <div class="text-xs text-gray-500 mt-1">預計完成：2025-09-15</div>
+              </div>
+            </div>
+            
+            <div class="mt-4 pt-4 border-t border-gray-100 flex gap-2">
+              <button class="flex-1 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm">
+                📱 聯絡
+              </button>
+              <button class="flex-1 px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm">
+                📋 指派任務
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 黃技師 -->
+        <div class="bg-white rounded-2xl border shadow-sm">
+          <div class="p-6">
+            <div class="flex items-center gap-4 mb-4">
+              <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                <span class="text-orange-600 font-semibold text-lg">黃</span>
+              </div>
+              <div>
+                <h3 class="font-semibold text-lg">黃技師</h3>
+                <p class="text-sm text-gray-500">瓦斯配管專家</p>
+              </div>
+            </div>
+            
+            <div class="space-y-3">
+              <div>
+                <div class="text-sm text-gray-600 mb-2">專業技能</div>
+                <div class="flex gap-2 flex-wrap">
+                  <span class="inline-flex items-center rounded-full bg-orange-100 text-orange-700 px-2 py-0.5 text-xs">瓦斯管路</span>
+                  <span class="inline-flex items-center rounded-full bg-orange-100 text-orange-700 px-2 py-0.5 text-xs">220v 電路</span>
+                  <span class="inline-flex items-center rounded-full bg-orange-100 text-orange-700 px-2 py-0.5 text-xs">水管配置</span>
+                </div>
+              </div>
+              
+              <div>
+                <div class="text-sm text-gray-600 mb-2">服務區域</div>
+                <div class="text-sm font-medium">新北市、桃園市</div>
+              </div>
+              
+              <div>
+                <div class="text-sm text-gray-600 mb-2">工作狀態</div>
+                <span class="inline-flex items-center rounded-full bg-amber-100 text-amber-700 px-3 py-1 text-sm font-medium">
+                  ⚠️ 忙碌
+                </span>
+              </div>
+              
+              <div>
+                <div class="text-sm text-gray-600 mb-2">本週工作量</div>
+                <div class="flex items-center gap-2">
+                  <div class="flex-1 bg-gray-200 rounded-full h-2">
+                    <div class="bg-orange-600 h-2 rounded-full" style="width: 90%"></div>
+                  </div>
+                  <span class="text-sm font-medium">36/40h</span>
+                </div>
+              </div>
+              
+              <div>
+                <div class="text-sm text-gray-600 mb-2">當前任務</div>
+                <div class="text-sm">M1 配管工程 + 緊急維修</div>
+                <div class="text-xs text-gray-500 mt-1">預計完成：2025-09-12</div>
+              </div>
+            </div>
+            
+            <div class="mt-4 pt-4 border-t border-gray-100 flex gap-2">
+              <button class="flex-1 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm">
+                📱 聯絡
+              </button>
+              <button class="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-gray-500 cursor-not-allowed text-sm" disabled>
+                📋 忙碌中
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 陳技師 -->
+        <div class="bg-white rounded-2xl border shadow-sm">
+          <div class="p-6">
+            <div class="flex items-center gap-4 mb-4">
+              <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                <span class="text-green-600 font-semibold text-lg">陳</span>
+              </div>
+              <div>
+                <h3 class="font-semibold text-lg">陳技師</h3>
+                <p class="text-sm text-gray-500">測試驗收專員</p>
+              </div>
+            </div>
+            
+            <div class="space-y-3">
+              <div>
+                <div class="text-sm text-gray-600 mb-2">專業技能</div>
+                <div class="flex gap-2 flex-wrap">
+                  <span class="inline-flex items-center rounded-full bg-green-100 text-green-700 px-2 py-0.5 text-xs">系統測試</span>
+                  <span class="inline-flex items-center rounded-full bg-green-100 text-green-700 px-2 py-0.5 text-xs">品質驗收</span>
+                  <span class="inline-flex items-center rounded-full bg-green-100 text-green-700 px-2 py-0.5 text-xs">真空管安裝</span>
+                </div>
+              </div>
+              
+              <div>
+                <div class="text-sm text-gray-600 mb-2">服務區域</div>
+                <div class="text-sm font-medium">大台北地區</div>
+              </div>
+              
+              <div>
+                <div class="text-sm text-gray-600 mb-2">工作狀態</div>
+                <span class="inline-flex items-center rounded-full bg-green-100 text-green-700 px-3 py-1 text-sm font-medium">
+                  ✅ 可用
+                </span>
+              </div>
+              
+              <div>
+                <div class="text-sm text-gray-600 mb-2">本週工作量</div>
+                <div class="flex items-center gap-2">
+                  <div class="flex-1 bg-gray-200 rounded-full h-2">
+                    <div class="bg-green-600 h-2 rounded-full" style="width: 60%"></div>
+                  </div>
+                  <span class="text-sm font-medium">24/40h</span>
+                </div>
+              </div>
+              
+              <div>
+                <div class="text-sm text-gray-600 mb-2">當前任務</div>
+                <div class="text-sm">待分配新任務</div>
+                <div class="text-xs text-gray-500 mt-1">可立即安排工作</div>
+              </div>
+            </div>
+            
+            <div class="mt-4 pt-4 border-t border-gray-100 flex gap-2">
+              <button class="flex-1 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm">
+                📱 聯絡
+              </button>
+              <button class="flex-1 px-3 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 text-sm">
+                📋 指派任務
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
