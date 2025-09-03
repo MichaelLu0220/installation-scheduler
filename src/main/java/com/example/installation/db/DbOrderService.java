@@ -264,19 +264,19 @@ public class DbOrderService {
         }
     }
     
-    public boolean isMachineNameExists(String machineName) {
-        try {
-            Integer count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM orders WHERE machine_name = ?",
-                Integer.class,
-                machineName
-            );
-            return count != null && count > 0;
-        } catch (Exception e) {
-            System.err.println("❌ 檢查機台名稱失敗: " + e.getMessage());
-            return false;
-        }
-    }
+//    public boolean isMachineNameExists(String machineName) {
+//        try {
+//            Integer count = jdbc.queryForObject(
+//                "SELECT COUNT(*) FROM orders WHERE machine_name = ?",
+//                Integer.class,
+//                machineName
+//            );
+//            return count != null && count > 0;
+//        } catch (Exception e) {
+//            System.err.println("❌ 檢查機台名稱失敗: " + e.getMessage());
+//            return false;
+//        }
+//    }
     
     public DashboardStats getDashboardStats() {
         try {

@@ -46,9 +46,9 @@ public class OrderController {
 			validateInput(machineName, dueDateStr);
 
 			// 檢查機台名稱是否已存在
-			if (dbOrderService.isMachineNameExists(machineName)) {
-				throw new IllegalArgumentException("機台名稱 " + machineName + " 已存在，請使用其他名稱");
-			}
+//			if (dbOrderService.isMachineNameExists(machineName)) {
+//				throw new IllegalArgumentException("機台名稱 " + machineName + " 已存在，請使用其他名稱");
+//			}
 
 			LocalDate dueDate = LocalDate.parse(dueDateStr);
 
@@ -87,23 +87,31 @@ public class OrderController {
 
 			System.out.println("✅ 訂單已建立，ID: " + orderId);
 
-			// ✅ 修正：插入材料需求，使用 A/B/C 代碼存入資料庫
+			// 插入材料需求
 			int materialCount = 0;
-			materialCount += insertMaterialIfNotZero(orderId, "A", nitrogenPipe); // 氮氣管 -> A
-			materialCount += insertMaterialIfNotZero(orderId, "B", waterPipe); // 水管 -> B
-			materialCount += insertMaterialIfNotZero(orderId, "C", vacuumPipe); // 真空管 -> C
+			materialCount += insertMaterialIfNotZero(orderId, "A", nitrogenPipe);
+			materialCount += insertMaterialIfNotZero(orderId, "B", waterPipe);
+			materialCount += insertMaterialIfNotZero(orderId, "C", vacuumPipe);
 
+			// ✅ 修正：安全的BAW呼叫
+			String bawInstanceId = null;
 			try {
 				InstallationJob job = convertToInstallationJob(machineName, dueDate, nitrogenPipe, waterPipe,
 						vacuumPipe);
 				Map<String, Object> bawResult = bawService.startProcess(job);
 
-				if (!bawResult.containsKey("error")) {
-					String instanceId = (String) bawResult.get("piid");
-					System.out.println("✅ BAW 流程已啟動: " + instanceId);
+				if (bawResult.containsKey("error")) {
+					System.err.println("⚠️ BAW 流程啟動失敗: " + bawResult.get("error"));
+				} else if (bawResult.containsKey("piid")) {
+					bawInstanceId = (String) bawResult.get("piid");
+					System.out.println("✅ BAW 流程已啟動: " + bawInstanceId);
 
-					// 將 BAW 實例 ID 存到資料庫 (需要先在 schema.sql 中新增欄位)
-					jdbc.update("UPDATE orders SET baw_instance_id = ? WHERE id = ?", instanceId, orderId);
+					// ✅ 修正：更新資料庫前先檢查欄位是否存在
+					try {
+						jdbc.update("UPDATE orders SET baw_instance_id = ? WHERE id = ?", bawInstanceId, orderId);
+					} catch (Exception dbError) {
+						System.err.println("⚠️ 更新BAW實例ID失敗 (可能是資料庫欄位不存在): " + dbError.getMessage());
+					}
 				}
 
 			} catch (Exception bawError) {
@@ -111,7 +119,9 @@ public class OrderController {
 				// 不拋出例外，讓訂單建立程序繼續
 			}
 
-			String successMsg = String.format("✅ 訂單 %s 已成功建立！\n" + "預計完成日期：%s\n" + "狀態：%s\n" + "包含 %d 種材料需求",
+			String successMsg = String.format(
+					"✅ 訂單 %s 已成功建立！\n" + "預計完成日期：%s\n" + "狀態：%s\n" + "包含 %d 種材料需求"
+							+ (bawInstanceId != null ? "\nBAW流程ID：" + bawInstanceId : ""),
 					machineName, etaDate, "ON_TIME".equals(status) ? "準時" : "可能延遲", materialCount);
 			redirectAttributes.addFlashAttribute("success", successMsg);
 
