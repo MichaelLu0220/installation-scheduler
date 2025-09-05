@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh-Hant" xmlns:th="http://www.thymeleaf.org">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>排程檢視 - 智慧安裝排程平台</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body class="min-h-screen bg-gradient-to-b from-gray-50 to-white">
   <div class="max-w-7xl mx-auto px-6 py-6">
@@ -27,70 +29,100 @@
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="bg-white rounded-2xl border shadow-sm p-4">
           <div class="text-sm text-gray-500">總工單數</div>
-          <div class="text-2xl font-bold text-blue-600" th:text="${orders != null ? #lists.size(orders) : 0}">2</div>
+          <div class="text-2xl font-bold text-blue-600" th:text="${totalOrders != null ? totalOrders : 0}">0</div>
           <div class="text-xs text-gray-400 mt-1">系統中的所有工單</div>
         </div>
         <div class="bg-white rounded-2xl border shadow-sm p-4">
-          <div class="text-sm text-gray-500">今日安排</div>
-          <div class="text-2xl font-bold text-green-600">0</div>
-          <div class="text-xs text-gray-400 mt-1">今天執行的工單</div>
+          <div class="text-sm text-gray-500">今日執行</div>
+          <div class="text-2xl font-bold text-green-600" th:text="${todayTasks != null ? todayTasks : 0}">0</div>
+          <div class="text-xs text-gray-400 mt-1">今天預計完成的工單</div>
         </div>
         <div class="bg-white rounded-2xl border shadow-sm p-4">
           <div class="text-sm text-gray-500">工人利用率</div>
-          <div class="text-2xl font-bold text-purple-600">75%</div>
+          <div class="text-2xl font-bold text-purple-600" th:text="${utilizationRate != null ? utilizationRate : 0} + '%'">0%</div>
           <div class="text-xs text-gray-400 mt-1">平均工人忙碌程度</div>
         </div>
         <div class="bg-white rounded-2xl border shadow-sm p-4">
-          <div class="text-sm text-gray-500">預計延遲</div>
-          <div class="text-2xl font-bold text-red-600">1</div>
+          <div class="text-sm text-gray-500">延遲風險</div>
+          <div class="text-2xl font-bold text-red-600" th:text="${lateOrders != null ? lateOrders : 0}">0</div>
           <div class="text-xs text-gray-400 mt-1">可能延遲的工單</div>
         </div>
       </div>
 
-      <!-- 甘特圖模擬 -->
+      <!-- 智慧甘特圖 -->
       <div class="bg-white rounded-2xl border shadow-sm">
         <div class="px-6 py-4 border-b border-gray-100">
-          <h3 class="text-lg font-semibold text-gray-900">排程時間軸</h3>
-          <p class="text-sm text-gray-500">工單執行時間安排概覽</p>
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">智慧排程時間軸</h3>
+              <p class="text-sm text-gray-500">基於材料到貨與工人產能的動態排程</p>
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+              <div class="flex items-center gap-1">
+                <div class="w-3 h-3 bg-blue-500 rounded"></div>
+                <span>正常</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <div class="w-3 h-3 bg-yellow-500 rounded"></div>
+                <span>緊急</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <div class="w-3 h-3 bg-orange-500 rounded"></div>
+                <span>延遲</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <div class="w-3 h-3 bg-red-500 rounded"></div>
+                <span>風險</span>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="p-6">
-          <div class="overflow-x-auto">
-            <div class="min-w-full">
-              <!-- 時間軸標題 -->
+          <div class="overflow-x-auto custom-scrollbar">
+            <div class="min-w-[800px]">
+              <!-- 時間軸標題 - 簡化版本 -->
               <div class="grid grid-cols-12 gap-2 mb-4 text-xs text-gray-500">
-                <div class="col-span-2 font-medium">工單/機台</div>
+                <div class="col-span-2 font-medium">工單資訊</div>
                 <div class="col-span-10 grid grid-cols-10 gap-1">
-                  <div class="text-center">8/20</div>
-                  <div class="text-center">8/25</div>
-                  <div class="text-center">9/01</div>
-                  <div class="text-center">9/05</div>
+                  <div class="text-center">8/31</div>
+                  <div class="text-center">9/5</div>
                   <div class="text-center">9/10</div>
                   <div class="text-center">9/15</div>
                   <div class="text-center">9/20</div>
                   <div class="text-center">9/25</div>
                   <div class="text-center">9/30</div>
-                  <div class="text-center">10/05</div>
+                  <div class="text-center">10/5</div>
+                  <div class="text-center">10/10</div>
+                  <div class="text-center">10/15</div>
                 </div>
               </div>
 
               <!-- 工單排程條 -->
-              <div class="space-y-3" th:each="order : ${orders}">
+              <div th:if="${orders != null and !#lists.isEmpty(orders)}" class="space-y-3" th:each="order : ${orders}">
                 <div class="grid grid-cols-12 gap-2 items-center">
                   <!-- 工單信息 -->
-                  <div class="col-span-2">
+                  <div class="col-span-2 p-3 bg-gray-50 rounded-lg">
                     <div class="font-semibold text-sm" th:text="${order.machineName}">M1</div>
-                    <div class="text-xs text-gray-500">
-                      截止: <span th:text="${order.dueDate}">2025-10-15</span>
+                    <div class="text-xs text-gray-500 mt-1">
+                      截止: <span th:text="${order.dueDate}" 
+                                  th:classappend="${order.isDueSoon()} ? 'text-red-600 font-bold' : ''">10/15</span>
                     </div>
-                    <div class="text-xs mt-1">
+                    <div class="flex items-center gap-2 mt-1">
                       <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs"
                             th:classappend="${order.status == 'ON_TIME'} ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
                             th:text="${order.status == 'ON_TIME'} ? '✅' : '⚠️'">✅</span>
+                      <span th:if="${order.hasMaterialRisk()}" 
+                            class="inline-flex items-center rounded-full bg-orange-100 text-orange-700 px-2 py-0.5 text-xs">
+                        📦
+                      </span>
+                    </div>
+                    <div class="text-xs text-gray-400 mt-1">
+                      工期: <span th:text="${order.estimatedDuration}">5</span> 天
                     </div>
                   </div>
                   
-                  <!-- 時間軸 -->
-                  <div class="col-span-10 grid grid-cols-10 gap-1 h-12 relative">
+                  <!-- 甘特圖時間軸 -->
+                  <div class="col-span-10 relative h-12">
                     <!-- 背景網格 -->
                     <div class="absolute inset-0 grid grid-cols-10 gap-1">
                       <div class="bg-gray-50 rounded"></div>
@@ -105,24 +137,116 @@
                       <div class="bg-gray-50 rounded"></div>
                     </div>
                     
-                    <!-- 排程條 (根據工單動態顯示) -->
+                    <!-- 排程條 - 使用固定位置直到資料修正 -->
                     <div th:if="${order.machineName == 'M1'}" 
-                         class="absolute left-2 top-1 bottom-1 bg-blue-500 rounded-lg flex items-center justify-center text-white text-xs font-medium shadow-sm"
-                         style="width: calc(60% - 0.25rem);">
-                      <span>氮氣管+水管</span>
-                    </div>
-                    <div th:if="${order.machineName == 'M1'}" 
-                         class="absolute right-10 top-1 bottom-1 bg-blue-300 rounded-lg flex items-center justify-center text-white text-xs font-medium shadow-sm"
-                         style="width: calc(20% - 0.25rem);">
-                      <span>真空管</span>
+                         class="absolute left-[50%] top-1 bottom-1 bg-red-500 rounded-lg flex items-center justify-center text-white text-xs font-medium shadow-sm transition-all hover:shadow-md"
+                         style="width: 20%;"
+                         th:title="${order.machineName} + ' - 氮氣管'">
+                      <span>M1-氮氣管</span>
                     </div>
                     
                     <div th:if="${order.machineName == 'M2'}" 
-                         class="absolute left-20 top-1 bottom-1 bg-green-500 rounded-lg flex items-center justify-center text-white text-xs font-medium shadow-sm"
-                         style="width: calc(50% - 0.25rem);">
-                      <span>全材料</span>
+                         class="absolute left-[10%] top-1 bottom-1 bg-blue-500 rounded-lg flex items-center justify-center text-white text-xs font-medium shadow-sm transition-all hover:shadow-md"
+                         style="width: 40%;"
+                         th:title="${order.machineName} + ' - 全材料'">
+                      <span>M2-全材料</span>
+                    </div>
+                    
+                    <!-- 今日標記線 -->
+                    <div class="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10" 
+                         style="left: 10%;" 
+                         title="今日">
                     </div>
                   </div>
+                </div>
+              </div>
+              
+              <!-- 如果沒有工單 -->
+              <div th:if="${orders == null or #lists.isEmpty(orders)}" class="text-center py-8 text-gray-500">
+                <div class="text-4xl mb-2">📋</div>
+                <div class="text-lg">尚無排程工單</div>
+                <div class="text-sm">請先建立工單以查看排程</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 材料到貨與排程協調 -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- 材料到貨時間表 -->
+        <div class="bg-white rounded-2xl border shadow-sm">
+          <div class="px-6 py-4 border-b border-gray-100">
+            <h3 class="text-lg font-semibold text-gray-900">材料到貨排程</h3>
+            <p class="text-sm text-gray-500">影響工單排程的關鍵材料到貨時間</p>
+          </div>
+          <div class="p-6">
+            <div class="h-64 overflow-y-auto custom-scrollbar">
+              <div th:if="${inboundPlans != null and !#lists.isEmpty(inboundPlans)}" class="space-y-3" th:each="plan : ${inboundPlans}">
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div class="flex items-center gap-3">
+                    <div class="w-3 h-3 rounded-full bg-blue-500"></div>
+                    <div>
+                      <div class="font-medium text-sm" th:text="${plan.material}">氮氣管</div>
+                      <div class="text-xs text-gray-500" th:text="${plan.arrivalDate}">2025-08-20</div>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div class="font-mono text-sm text-green-600" th:text="'+' + ${plan.qty}">+60</div>
+                    <div class="text-xs text-gray-500">即將到貨</div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 如果沒有到貨計劃 -->
+              <div th:if="${inboundPlans == null or #lists.isEmpty(inboundPlans)}" class="text-center py-8 text-gray-500">
+                <div class="text-4xl mb-2">📦</div>
+                <div class="text-lg">暫無到貨計劃</div>
+                <div class="text-sm">請檢查資料庫資料</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 工人產能分析 -->
+        <div class="bg-white rounded-2xl border shadow-sm">
+          <div class="px-6 py-4 border-b border-gray-100">
+            <h3 class="text-lg font-semibold text-gray-900">工人產能分析</h3>
+            <p class="text-sm text-gray-500">當前工人配置與產能利用情況</p>
+          </div>
+          <div class="p-6">
+            <div class="space-y-4">
+              <!-- 總產能 -->
+              <div class="p-4 bg-blue-50 rounded-lg">
+                <div class="flex justify-between items-center mb-2">
+                  <span class="text-sm font-medium text-blue-900">每日總產能</span>
+                  <span class="text-lg font-bold text-blue-700">24 單位</span>
+                </div>
+                <div class="text-xs text-blue-600">3 人 × 8 小時 × 1 單位/小時</div>
+              </div>
+              
+              <!-- 當前負載 -->
+              <div class="space-y-2">
+                <div class="flex justify-between text-sm">
+                  <span class="text-gray-600">當前工作負載</span>
+                  <span class="font-medium" th:text="${utilizationRate != null ? utilizationRate : 36} + '%'">36%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3">
+                  <div class="h-3 rounded-full transition-all duration-500 bg-green-500"
+                       th:style="'width: ' + ${utilizationRate != null ? utilizationRate : 36} + '%'"></div>
+                </div>
+                <div class="text-xs text-gray-500">
+                  <span class="text-green-600">✅ 產能充足</span>
+                </div>
+              </div>
+              
+              <!-- 排程建議 -->
+              <div class="p-3 bg-gray-50 rounded-lg">
+                <div class="font-medium text-sm text-gray-900 mb-2">智慧建議</div>
+                <div class="text-xs text-gray-600 space-y-1">
+                  <div>• 可以承接更多工單</div>
+                  <div>• 根據材料到貨調整排程順序</div>
+                  <div>• 優化工人任務分配</div>
                 </div>
               </div>
             </div>
@@ -130,65 +254,28 @@
         </div>
       </div>
 
-      <!-- 工人排班表 -->
-      <div class="bg-white rounded-2xl border shadow-sm">
-        <div class="px-6 py-4 border-b border-gray-100">
-          <h3 class="text-lg font-semibold text-gray-900">工人排班安排</h3>
-          <p class="text-sm text-gray-500">技師每日工作分配</p>
-        </div>
-        <div class="p-6">
-          <div class="grid grid-cols-8 gap-2 text-sm">
-            <!-- 標題行 -->
-            <div class="font-medium text-gray-700">技師</div>
-            <div class="text-center text-gray-500">週一</div>
-            <div class="text-center text-gray-500">週二</div>
-            <div class="text-center text-gray-500">週三</div>
-            <div class="text-center text-gray-500">週四</div>
-            <div class="text-center text-gray-500">週五</div>
-            <div class="text-center text-gray-500">週六</div>
-            <div class="text-center text-gray-500">週日</div>
-            
-            <!-- 林技師 -->
-            <div class="font-medium">林技師</div>
-            <div class="bg-blue-100 text-blue-800 text-xs p-2 rounded text-center">M1 安裝</div>
-            <div class="bg-blue-100 text-blue-800 text-xs p-2 rounded text-center">M1 安裝</div>
-            <div class="bg-gray-100 text-gray-500 text-xs p-2 rounded text-center">休息</div>
-            <div class="bg-green-100 text-green-800 text-xs p-2 rounded text-center">M2 安裝</div>
-            <div class="bg-green-100 text-green-800 text-xs p-2 rounded text-center">M2 安裝</div>
-            <div class="bg-gray-100 text-gray-500 text-xs p-2 rounded text-center">待分配</div>
-            <div class="bg-gray-100 text-gray-500 text-xs p-2 rounded text-center">休息</div>
-            
-            <!-- 黃技師 -->
-            <div class="font-medium">黃技師</div>
-            <div class="bg-purple-100 text-purple-800 text-xs p-2 rounded text-center">維修</div>
-            <div class="bg-blue-100 text-blue-800 text-xs p-2 rounded text-center">M1 配管</div>
-            <div class="bg-blue-100 text-blue-800 text-xs p-2 rounded text-center">M1 配管</div>
-            <div class="bg-green-100 text-green-800 text-xs p-2 rounded text-center">M2 配管</div>
-            <div class="bg-gray-100 text-gray-500 text-xs p-2 rounded text-center">待分配</div>
-            <div class="bg-gray-100 text-gray-500 text-xs p-2 rounded text-center">待分配</div>
-            <div class="bg-gray-100 text-gray-500 text-xs p-2 rounded text-center">休息</div>
-            
-            <!-- 陳技師 -->
-            <div class="font-medium">陳技師</div>
-            <div class="bg-gray-100 text-gray-500 text-xs p-2 rounded text-center">休息</div>
-            <div class="bg-orange-100 text-orange-800 text-xs p-2 rounded text-center">材料檢查</div>
-            <div class="bg-blue-100 text-blue-800 text-xs p-2 rounded text-center">M1 測試</div>
-            <div class="bg-green-100 text-green-800 text-xs p-2 rounded text-center">M2 測試</div>
-            <div class="bg-gray-100 text-gray-500 text-xs p-2 rounded text-center">待分配</div>
-            <div class="bg-gray-100 text-gray-500 text-xs p-2 rounded text-center">待分配</div>
-            <div class="bg-gray-100 text-gray-500 text-xs p-2 rounded text-center">休息</div>
+      <!-- 排程策略說明 -->
+      <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+        <h4 class="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+          🧠 智慧排程策略
+        </h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
+          <div>
+            <h5 class="font-medium mb-2">排程原則：</h5>
+            <ul class="space-y-1 text-blue-700">
+              <li>• <strong>材料優先：</strong>優先安排材料充足的工單</li>
+              <li>• <strong>截止日導向：</strong>緊急工單自動提前排程</li>
+              <li>• <strong>產能平衡：</strong>合理分配工人資源</li>
+            </ul>
           </div>
-        </div>
-      </div>
-
-      <!-- 排程說明 -->
-      <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
-        <h4 class="font-semibold text-blue-900 mb-2">📋 排程說明</h4>
-        <div class="text-sm text-blue-800 space-y-1">
-          <div>• <strong>M1 機台：</strong>優先處理氮氣管和水管安裝，真空管等待到貨後完成</div>
-          <div>• <strong>M2 機台：</strong>安排在 M1 完成主要材料後開始，採用 Partial 策略分批處理</div>
-          <div>• <strong>工人安排：</strong>林技師負責主要安裝，黃技師處理配管，陳技師負責測試驗收</div>
-          <div>• <strong>材料協調：</strong>系統會根據到貨計劃自動調整各工單的開始時間</div>
+          <div>
+            <h5 class="font-medium mb-2">動態調整：</h5>
+            <ul class="space-y-1 text-blue-700">
+              <li>• <strong>材料到貨：</strong>自動重新排序工單優先級</li>
+              <li>• <strong>風險預警：</strong>提前識別潛在延遲風險</li>
+              <li>• <strong>資源最佳化：</strong>最大化工人利用效率</li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>

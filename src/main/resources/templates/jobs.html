@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="zh-Hant" xmlns:th="http://www.thymeleaf.org">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>工單管理 - 智慧安裝排程平台</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body class="min-h-screen bg-gradient-to-b from-gray-50 to-white">
   <div class="max-w-7xl mx-auto px-6 py-6">
-    <!-- 優化後的導航欄 -->
+    <!-- 統一的導航欄 -->
     <div class="flex items-center gap-3 mb-5">
       <div class="text-xl font-semibold">智慧安裝排程平台</div>
       <span class="ml-2 inline-flex items-center rounded-full bg-blue-100 text-blue-800 px-2 py-0.5 text-xs">Firsttech Demo</span>
@@ -26,8 +28,11 @@
       <div class="bg-white rounded-2xl border shadow-sm p-4">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-semibold">工單管理</h2>
-          <div class="flex items-center gap-2 text-sm text-gray-600">
-            <span>共 <span class="font-medium" th:text="${#lists.size(jobs)}">0</span> 個工單</span>
+          <div class="flex items-center gap-4 text-sm text-gray-600">
+            <span>共 <span class="font-medium" th:text="${#lists.size(orders)}">0</span> 個工單</span>
+            <span th:if="${q != null and !q.isEmpty()}" class="text-blue-600">
+              篩選結果: <span class="font-medium" th:text="${#lists.size(orders)}">0</span> 個
+            </span>
           </div>
         </div>
         
@@ -35,10 +40,10 @@
           <div class="flex-1">
             <input class="w-full rounded-xl border border-gray-300 px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
                    name="q" 
-                   placeholder="搜尋工單編號、地址或客戶名稱..." 
+                   placeholder="搜尋工單編號、機台名稱或狀態..." 
                    th:value="${q}"/>
           </div>
-          <button class="px-4 py-2 rounded-xl border bg-gray-50 hover:bg-gray-100 text-sm font-medium">
+          <button class="px-4 py-2 rounded-xl border bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium">
             🔍 搜尋
           </button>
           <a href="/jobs" class="px-4 py-2 rounded-xl border hover:bg-gray-50 text-sm">
@@ -48,89 +53,117 @@
       </div>
 
       <!-- 工單列表 -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="bg-white rounded-2xl border shadow-sm p-4 hover:shadow-md transition-shadow" th:each="j : ${jobs}">
-          <div class="flex items-center gap-2 text-sm mb-2">
-            <span class="font-semibold text-base" th:text="${j.jobId}">JOB-XXXX</span>
-            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-                  th:classappend="${j.status=='Planned'} ? 'bg-blue-100 text-blue-700' : 
-                                  (${j.status=='Assigned'} ? 'bg-emerald-100 text-emerald-700' : 
-                                  'bg-gray-100 text-gray-700')"
-                  th:text="${j.status=='Planned'} ? '已排程' : 
-                           (${j.status=='Assigned'} ? '已指派' : '草稿')">狀態</span>
+      <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div class="bg-white rounded-2xl border shadow-sm p-4 hover:shadow-md transition-shadow" 
+             th:each="order : ${orders}">
+             
+          <!-- 工單標題區 -->
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <span class="font-semibold text-lg" th:text="${order.formattedJobId}">工單-1</span>
+              <span class="font-medium text-blue-600" th:text="${order.machineName}">M1</span>
+            </div>
             
-            <!-- 優先級標示 -->
-            <span th:if="${j.priority == 'High'}" class="inline-flex items-center rounded-full bg-red-100 text-red-700 px-2 py-0.5 text-xs font-medium">
-              🔥 高優先
-            </span>
-            <span th:if="${j.priority == 'Normal'}" class="inline-flex items-center rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-xs font-medium">
-              📅 標準
-            </span>
-          </div>
-          
-          <div class="text-sm text-gray-700 mb-3">
-            <div class="font-medium" th:text="${j.customerName}">客戶名稱</div>
-            <div class="text-gray-600" th:text="${j.address}">地址</div>
-            <div class="text-gray-500 mt-1">
-              電話: <span th:text="${j.customerPhone}">電話</span>
+            <!-- 狀態標籤 -->
+            <div class="flex items-center gap-1">
+              <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                    th:classappend="${order.status == 'ON_TIME'} ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                    th:text="${order.status == 'ON_TIME'} ? '✅ 準時' : '⚠️ 風險'">狀態</span>
             </div>
           </div>
+          
+          <!-- 優先級和風險提示 -->
+          <div class="flex items-center gap-2 mb-3">
+            <!-- 優先級標示 -->
+            <span th:if="${order.priority == 'High'}" 
+                  class="inline-flex items-center rounded-full bg-red-100 text-red-700 px-2 py-0.5 text-xs font-medium">
+              🔥 緊急
+            </span>
+            <span th:if="${order.priority == 'Medium'}" 
+                  class="inline-flex items-center rounded-full bg-yellow-100 text-yellow-700 px-2 py-0.5 text-xs font-medium">
+              ⚡ 優先
+            </span>
+            <span th:if="${order.priority == 'Normal'}" 
+                  class="inline-flex items-center rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-xs font-medium">
+              📅 標準
+            </span>
+            
+            <!-- 材料風險提示 -->
+            <span th:if="${order.hasMaterialRisk()}" 
+                  class="inline-flex items-center rounded-full bg-orange-100 text-orange-700 px-2 py-0.5 text-xs font-medium">
+              📦 缺料
+            </span>
+          </div>
 
-          <!-- 時間資訊 -->
-          <div class="text-sm text-gray-600 mb-3" th:if="${j.start != null}">
-            <div class="flex items-center gap-2">
-              <span class="text-gray-500">📅 排程時段:</span>
-              <span th:text="${j.start}">開始時間</span>
-              <span th:if="${j.end != null}">
-                - <span th:text="${j.end}">結束時間</span>
-              </span>
+          <!-- 日期資訊 -->
+          <div class="text-sm text-gray-700 mb-3 space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-gray-500">截止日期:</span>
+              <span class="font-mono" 
+                    th:classappend="${order.isDueSoon()} ? 'text-red-600 font-medium' : (${order.isOverdue()} ? 'text-red-700 font-bold' : 'text-gray-700')"
+                    th:text="${order.dueDate}">2025-10-15</span>
+            </div>
+            <div th:if="${order.etaDate != null}" class="flex items-center justify-between">
+              <span class="text-gray-500">預計完成:</span>
+              <span class="font-mono text-blue-600" th:text="${order.etaDate}">2025-09-28</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-gray-500">剩餘天數:</span>
+              <span class="font-mono"
+                    th:classappend="${order.daysUntilDue < 0} ? 'text-red-600' : (${order.daysUntilDue <= 7} ? 'text-orange-600' : 'text-green-600')"
+                    th:text="${order.daysUntilDue < 0 ? '已逾期 ' + (-order.daysUntilDue) + ' 天' : order.daysUntilDue + ' 天'}">10 天</span>
             </div>
           </div>
 
           <!-- 材料需求摘要 -->
-          <div class="mb-3" th:if="${!#lists.isEmpty(j.bom)}">
-            <div class="text-xs text-gray-500 mb-1">材料需求:</div>
-            <div class="flex gap-1 flex-wrap">
-              <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs border"
-                    th:each="b : ${j.bom}"
-                    th:classappend="${(b.reservedQty ?: 0) >= b.qty} ? 'bg-green-50 text-green-700 border-green-200' : 'bg-amber-50 text-amber-700 border-amber-200'">
-                <span th:text="${b.name}">材料</span>: 
-                <span th:text="${b.qty}">數量</span>
-                <span th:if="${(b.reservedQty ?: 0) >= b.qty}" class="ml-1">✅</span>
-                <span th:if="${(b.reservedQty ?: 0) < b.qty}" class="ml-1">⚠️</span>
-              </span>
+          <div class="mb-3" th:if="${!#lists.isEmpty(order.materials)}">
+            <div class="flex items-center justify-between mb-2">
+              <div class="text-xs text-gray-500">材料需求:</div>
+              <div class="text-xs text-gray-500">
+                滿足率: <span class="font-medium" 
+                           th:classappend="${order.materialSatisfactionRate < 100} ? 'text-red-600' : 'text-green-600'"
+                           th:text="${#numbers.formatDecimal(order.materialSatisfactionRate, 0, 1)} + '%'">100%</span>
+              </div>
+            </div>
+            <div class="space-y-1">
+              <div class="flex items-center justify-between text-xs" 
+                   th:each="material : ${order.materials}">
+                <span class="flex items-center gap-1">
+                  <span th:text="${material.material}">材料</span>:
+                  <span th:text="${material.qtyNeeded}">數量</span>
+                  <span th:if="${material.shortage == 0}" class="text-green-600">✅</span>
+                  <span th:if="${material.shortage > 0}" class="text-red-600">⚠️</span>
+                </span>
+                <span class="font-mono text-gray-600"
+                      th:text="${material.qtyOnHand} + '/' + ${material.qtyNeeded}">30/80</span>
+              </div>
             </div>
           </div>
-
-          <!-- SLA到期提醒 -->
-          <div class="text-xs text-gray-500 mb-3" th:if="${j.slaDue != null}">
-            SLA到期: <span th:text="${j.slaDue}">到期時間</span>
-          </div>
-
-          <!-- 指派技師 -->
-          <div class="mb-3" th:if="${!#lists.isEmpty(j.assigned)}">
-            <div class="text-xs text-gray-500 mb-1">指派技師:</div>
-            <div class="flex gap-1">
-              <span class="inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-2 py-0.5 text-xs"
-                    th:each="worker : ${j.assigned}"
-                    th:text="${worker}">技師編號</span>
+          
+          <!-- 材料滿足度進度條 -->
+          <div class="mb-3">
+            <div class="w-full bg-gray-200 rounded-full h-2">
+              <div class="h-2 rounded-full transition-all duration-300"
+                   th:classappend="${order.materialSatisfactionRate < 100} ? 'bg-red-500' : 'bg-green-500'"
+                   th:style="'width: ' + ${order.materialSatisfactionRate} + '%'"></div>
             </div>
           </div>
           
           <!-- 操作按鈕 -->
           <div class="flex gap-2 pt-3 border-t border-gray-100">
             <a class="px-3 py-1.5 rounded-xl border hover:bg-gray-50 text-sm flex-1 text-center" 
-               th:href="@{'/jobs/' + ${j.jobId}}">
+               th:href="@{'/jobs/' + ${order.id}}">
                📋 查看詳情
             </a>
-            <button class="px-3 py-1.5 rounded-xl border hover:bg-blue-50 hover:border-blue-300 text-sm text-blue-600">
+            <a class="px-3 py-1.5 rounded-xl border hover:bg-blue-50 hover:border-blue-300 text-sm text-blue-600"
+               th:href="@{'/orders/edit/' + ${order.id}}">
               ✏️ 編輯
-            </button>
+            </a>
           </div>
         </div>
         
         <!-- 如果沒有工單 -->
-        <div th:if="${#lists.isEmpty(jobs)}" class="col-span-2 bg-white rounded-2xl border shadow-sm p-8 text-center">
+        <div th:if="${#lists.isEmpty(orders)}" class="col-span-full bg-white rounded-2xl border shadow-sm p-8 text-center">
           <div class="text-gray-500">
             <div class="text-4xl mb-4">📋</div>
             <div class="text-lg mb-2">
@@ -153,7 +186,7 @@
       <!-- 搜尋結果提示 -->
       <div th:if="${q != null and !q.isEmpty()}" class="text-center text-sm text-gray-500">
         搜尋關鍵字: "<span class="font-medium" th:text="${q}"></span>" 
-        | 找到 <span class="font-medium" th:text="${#lists.size(jobs)}">0</span> 個結果
+        | 找到 <span class="font-medium" th:text="${#lists.size(orders)}">0</span> 個結果
       </div>
     </div>
   </div>
