@@ -5,6 +5,7 @@ import com.example.installation.baw.BAWService;
 import com.example.installation.model.InstallationJob;
 import com.example.installation.model.BomItem;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -15,6 +16,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Controller
 @RequestMapping("/orders")
@@ -22,6 +25,7 @@ public class OrderController {
 	private final DbOrderService dbOrderService;
 	private final BAWService bawService;
 	private final JdbcTemplate jdbc;
+	private static final Logger logger = LoggerFactory.getLogger(OrderController.class); // 修正 Logger 類名
 
 	public OrderController(DbOrderService dbOrderService, BAWService bawService, JdbcTemplate jdbc) {
 		this.dbOrderService = dbOrderService;
@@ -42,22 +46,13 @@ public class OrderController {
 			String machineName = params.get("machineName");
 			String dueDateStr = params.get("dueDate");
 
-			// 基本驗證
 			validateInput(machineName, dueDateStr);
 
-			// 檢查機台名稱是否已存在
-//			if (dbOrderService.isMachineNameExists(machineName)) {
-//				throw new IllegalArgumentException("機台名稱 " + machineName + " 已存在，請使用其他名稱");
-//			}
-
 			LocalDate dueDate = LocalDate.parse(dueDateStr);
-
-			// 驗證日期
 			if (dueDate.isBefore(LocalDate.now())) {
 				throw new IllegalArgumentException("截止日期不能是過去的日期");
 			}
 
-			// 解析材料需求
 			int nitrogenPipe = parseIntSafely(params.get("nitrogenPipe"));
 			int waterPipe = parseIntSafely(params.get("waterPipe"));
 			int vacuumPipe = parseIntSafely(params.get("vacuumPipe"));
@@ -66,17 +61,15 @@ public class OrderController {
 				throw new IllegalArgumentException("請至少填寫一種材料的需求量");
 			}
 
-			// 計算預估完成時間和狀態
 			LocalDate etaDate = calculateEtaDate(dueDate, nitrogenPipe + waterPipe + vacuumPipe);
 			String status = etaDate.isAfter(dueDate) ? "LATE" : "ON_TIME";
 
-			System.out.println("🔧 建立訂單: " + machineName + ", 截止日期: " + dueDate + ", 預估完成: " + etaDate);
+			logger.info("建立訂單: {} 截止日期: {} 預估完成: {}", machineName, dueDate, etaDate);
 
-			// 插入訂單 (包含eta_date和status)
+			// 插入訂單
 			String insertOrderSql = "INSERT INTO orders (machine_name, due_date, eta_date, status) VALUES (?, ?, ?, ?)";
 			jdbc.update(insertOrderSql, machineName, dueDate, etaDate, status);
 
-			// 獲取新插入的訂單ID
 			Long orderId = jdbc.queryForObject(
 					"SELECT id FROM orders WHERE machine_name = ? AND due_date = ? ORDER BY id DESC", Long.class,
 					machineName, dueDate);
@@ -85,51 +78,52 @@ public class OrderController {
 				throw new RuntimeException("無法獲取新建訂單的ID");
 			}
 
-			System.out.println("✅ 訂單已建立，ID: " + orderId);
-
 			// 插入材料需求
 			int materialCount = 0;
 			materialCount += insertMaterialIfNotZero(orderId, "A", nitrogenPipe);
 			materialCount += insertMaterialIfNotZero(orderId, "B", waterPipe);
 			materialCount += insertMaterialIfNotZero(orderId, "C", vacuumPipe);
 
-			// ✅ 修正：安全的BAW呼叫
-			String bawInstanceId = null;
+			// ✅ 修正：使用包裝方法呼叫 BAW
+			String piid = null;
 			try {
-				InstallationJob job = convertToInstallationJob(machineName, dueDate, nitrogenPipe, waterPipe,
-						vacuumPipe);
+				// 轉換為 InstallationJob 格式
+				InstallationJob job = convertToInstallationJob(machineName, dueDate, nitrogenPipe, waterPipe, vacuumPipe);
+				
+				// 使用高階包裝方法
 				Map<String, Object> bawResult = bawService.startProcess(job);
-
-				if (bawResult.containsKey("error")) {
-					System.err.println("⚠️ BAW 流程啟動失敗: " + bawResult.get("error"));
-				} else if (bawResult.containsKey("piid")) {
-					bawInstanceId = (String) bawResult.get("piid");
-					System.out.println("✅ BAW 流程已啟動: " + bawInstanceId);
-
-					// ✅ 修正：更新資料庫前先檢查欄位是否存在
-					try {
-						jdbc.update("UPDATE orders SET baw_instance_id = ? WHERE id = ?", bawInstanceId, orderId);
-					} catch (Exception dbError) {
-						System.err.println("⚠️ 更新BAW實例ID失敗 (可能是資料庫欄位不存在): " + dbError.getMessage());
-					}
+				
+				// 檢查結果
+				if (bawResult.containsKey("success") && Boolean.TRUE.equals(bawResult.get("success"))) {
+					piid = (String) bawResult.get("piid");
+					logger.info("BAW 流程啟動成功，PIID={}", piid);
+				} else if (bawResult.containsKey("enabled") && Boolean.FALSE.equals(bawResult.get("enabled"))) {
+					piid = (String) bawResult.get("mockPiid");
+					logger.info("BAW 功能已停用，使用模擬 PIID={}", piid);
+				} else if (bawResult.containsKey("error")) {
+					throw new RuntimeException("BAW 整合失敗: " + bawResult.get("error"));
 				}
 
-			} catch (Exception bawError) {
-				System.err.println("⚠️ BAW 流程啟動失敗，但訂單已建立: " + bawError.getMessage());
+			} catch (Exception e) {
+				logger.warn("BAW 流程啟動失敗，但訂單已建立: {}", e.getMessage());
 				// 不拋出例外，讓訂單建立程序繼續
 			}
 
+			// 成功訊息
 			String successMsg = String.format(
-					"✅ 訂單 %s 已成功建立！\n" + "預計完成日期：%s\n" + "狀態：%s\n" + "包含 %d 種材料需求"
-							+ (bawInstanceId != null ? "\nBAW流程ID：" + bawInstanceId : ""),
-					machineName, etaDate, "ON_TIME".equals(status) ? "準時" : "可能延遲", materialCount);
+					"訂單 %s 已成功建立！預計完成日期：%s，狀態：%s，包含 %d 種材料需求%s",
+					machineName, 
+					etaDate, 
+					"ON_TIME".equals(status) ? "準時" : "可能延遲", 
+					materialCount,
+					(piid != null ? "，BAW流程ID：" + piid : ""));
+			
 			redirectAttributes.addFlashAttribute("success", successMsg);
 
 		} catch (IllegalArgumentException e) {
 			redirectAttributes.addFlashAttribute("error", e.getMessage());
 		} catch (Exception e) {
-			System.err.println("❌ 建立訂單失敗: " + e.getMessage());
-			e.printStackTrace();
+			logger.error("建立訂單失敗", e);
 			redirectAttributes.addFlashAttribute("error", "訂單建立失敗：" + e.getMessage());
 		}
 
@@ -195,7 +189,7 @@ public class OrderController {
 
 	private int insertMaterialIfNotZero(Long orderId, String materialCode, int qty) {
 		if (qty > 0) {
-			System.out.println("  📦 新增材料需求: 訂單 " + orderId + ", 材料 " + materialCode + ", 數量 " + qty);
+			logger.debug("新增材料需求: 訂單 {} 材料 {} 數量 {}", orderId, materialCode, qty);
 			jdbc.update("INSERT INTO order_materials (order_id, material, qty_needed) VALUES (?, ?, ?)", orderId,
 					materialCode, qty);
 			return 1;
@@ -244,7 +238,7 @@ public class OrderController {
 			int waterPipe = ((Number) orderData.getOrDefault("waterPipe", 0)).intValue();
 			int vacuumPipe = ((Number) orderData.getOrDefault("vacuumPipe", 0)).intValue();
 
-			// ✅ 修正：從資料庫獲取實際庫存 (A/B/C代碼)
+			// 從資料庫獲取實際庫存 (A/B/C代碼)
 			Map<String, Integer> inventory = Map.of("氮氣管", getInventoryByCode("A"), "水管", getInventoryByCode("B"),
 					"真空管", getInventoryByCode("C"));
 
@@ -279,14 +273,14 @@ public class OrderController {
 		}
 	}
 
-	// ✅ 新增：根據材料代碼獲取庫存數量的輔助方法
+	// 根據材料代碼獲取庫存數量的輔助方法
 	private int getInventoryByCode(String materialCode) {
 		try {
 			Integer qty = jdbc.queryForObject("SELECT qty_on_hand FROM inventory WHERE material = ?", Integer.class,
 					materialCode);
 			return qty != null ? qty : 0;
 		} catch (Exception e) {
-			System.err.println("❌ 獲取材料庫存失敗 (" + materialCode + "): " + e.getMessage());
+			logger.error("獲取材料庫存失敗 ({}): {}", materialCode, e.getMessage());
 			return 0;
 		}
 	}

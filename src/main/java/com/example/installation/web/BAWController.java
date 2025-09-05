@@ -1,58 +1,36 @@
 package com.example.installation.web;
 
 import com.example.installation.baw.BAWService;
-import com.example.installation.service.JobService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/baw")
+@RequestMapping("/baw")
 public class BAWController {
+
     private final BAWService bawService;
-    private final JobService jobService;
-    
-    public BAWController(BAWService bawService, JobService jobService) {
+
+    public BAWController(BAWService bawService) {
         this.bawService = bawService;
-        this.jobService = jobService;
     }
-    
+
     /**
-     * 啟動 BAW 流程
+     * 測試用端點：啟動流程
      */
-    @PostMapping("/start/{jobId}")
-    public ResponseEntity<Map<String, Object>> startProcess(@PathVariable String jobId) {
-        var job = jobService.find(jobId);
-        if (job.isEmpty()) {
-            return ResponseEntity.notFound().build();
+    @PostMapping("/start")
+    public ResponseEntity<?> startProcess(@RequestBody Map<String, Object> request) {
+        try {
+            // 從 request 取出流程參數
+            String bpdId = (String) request.getOrDefault("bpdId", "25.3d550ad9-4f35-48dc-8815-c8e612eec419");
+            Map<String, Object> params = (Map<String, Object>) request.get("params");
+
+            String piid = bawService.startProcessRaw(bpdId, params);
+
+            return ResponseEntity.ok(Map.of("piid", piid));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
-        
-        Map<String, Object> result = bawService.startProcess(job.get());
-        return ResponseEntity.ok(result);
-    }
-    
-    /**
-     * 查詢流程狀態
-     */
-    @GetMapping("/status/{instanceId}")
-    public ResponseEntity<Map<String, Object>> getStatus(@PathVariable String instanceId) {
-        Map<String, Object> result = bawService.getProcessStatus(instanceId);
-        return ResponseEntity.ok(result);
-    }
-    
-    /**
-     * BAW 完成後的 Webhook
-     */
-    @PostMapping("/webhook/completed")
-    public ResponseEntity<String> processCompleted(@RequestBody Map<String, Object> data) {
-        System.out.println("🔔 收到 BAW 完成通知: " + data);
-        
-        // 在這裡更新你的訂單狀態
-        String orderId = (String) data.get("orderId");
-        String status = (String) data.get("status");
-        
-        // TODO: 更新資料庫中的訂單狀態
-        
-        return ResponseEntity.ok("OK");
     }
 }
